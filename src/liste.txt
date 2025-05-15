@@ -1,0 +1,44 @@
+https://www.sandre.eaufrance.fr/api-referentiel
+Normes de reference des donnees sur la qualite de l'eau.
+Chaques mesures est un parametre, auquel est assigne un code.
+Base de donnees des parametres, et des elements geographiques lie aux points d'eau 
+(communes, rivieres, bassins, etc)
+
+https://www.data.gouv.fr/fr/datasets/resultats-du-controle-sanitaire-de-leau-distribuee-commune-par-commune/#/community-reuses
+Toutes les quelques jours a quelques mois
+Par commune
+API data gouv
+Liste de parametres:
+- Entérocoques /100ml-MS
+- Bact. et spores sulfito-rédu./100ml 
+- Bact. aér. revivifiables à 22°-68h
+- Bact. aér. revivifiables à 36°-44h
+- Bactéries coliformes /100ml-MS
+- Escherichia coli /100ml - MF
+- Température de l'eau *
+- Température de l'air *
+- Couleur (qualitatif)
+- Aspect (qualitatif)
+- Odeur (qualitatif)
+- Saveur (qualitatif)
+- Turbidité néphélométrique NFU
+- Chlore libre * 		
+- Chlore total *
+- pH *
+- pH
+- Conductivité à 25°C
+- Ammonium (en NH4)
+- Nitrates (en NO3)
+
+https://www.data.gouv.fr/fr/datasets/resultats-du-controle-sanitaire-de-leau-du-robinet/
+
+
+https://ades.eaufrance.fr/Recherche/Index/QualitometreAvance?g=9220e3
+Pas d'API
+Qualitometres d'eau souteraine
+
+
+https://www.data.gouv.fr/fr/datasets/base-de-connaissances-sur-les-produits-phytopharmaceutiques-a-partir-de-sources-ouvertes-c3po/
+https://www.data.gouv.fr/fr/datasets/achats-de-pesticides-par-code-postal/
+https://hubeau.eaufrance.fr/page/api-qualite-nappes
+https://hubeau.eaufrance.fr/page/api-qualite-cours-deau
