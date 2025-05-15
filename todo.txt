@@ -1,4 +1,4 @@
 (A) Contacter prof pour la @conventionstage t:2025-05-16
 (B) @explorer et lister toutes les +api
 (C) Faire le model du +rapport de stage
-(A) Faire la @conventionstage  t:2025-05-19
+x 2025-05-15 2025-05-15 Faire la @conventionstage . Verifier dates, nums, et rediger sujet et intitule  t:2025-05-19 pri:A
