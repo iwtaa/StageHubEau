@@ -3,7 +3,7 @@ import requests
 import json
 
 # Define the API endpoint URL
-hubeau_api_url = "hubeau.eaufrance.fr/api"
+hubeau_api_url = "https://hubeau.eaufrance.fr/api"
 
 nappes_api_url = "/v1/qualite_nappes/analyses"
 nappesStations_api_url = "/v1/qualite_nappes/stations"
@@ -19,23 +19,6 @@ riviereStations_api_url = "/v2/qualite_rivieres/station_pc"
 sandre_api_url = "https://api.sandre.eaufrance.fr/referentiels/v1/"
 
 referenciel_api_url = "par/"
-
-def getNomParametre(code):
-    """
-    Function to get the parameter ID from the SANDRE API.
-    :param nom: The name of the parameter to search for.
-    :return: The ID of the parameter if found, None otherwise.
-    """
-    # Construct the full URL for the API request
-    api_url = f"{sandre_api_url}{referenciel_api_url}{code}.json?outputSchema=SANDREv4"
-
-    # Define the headers (e.g., for content type)
-    headers = {
-        "Content-Type": "application/json"
-    }
-    data = getAPIdata(api_url)
-    return data['REFERENTIELS']['Referentiel']['Parametre'][0]['NomParametre'])
-    
 
 def getAPIdata(api_url):
     """
@@ -56,8 +39,8 @@ def getAPIdata(api_url):
         response.raise_for_status()
 
         # Process the response
-        if response.status_code == 200:
-            #print("Request was successful")
+        if response.status_code == 200 or response.status_code == 206:
+            print("Request was successful")
             return response.json()  # Assuming the response is in JSON format
         else:
             print(f"Request failed with status code {response.status_code}")
@@ -67,5 +50,31 @@ def getAPIdata(api_url):
         print(f"An error occurred: {e}")
         return None
 
+def getNomParametre(code):
+    """
+    Function to get the parameter ID from the SANDRE API.
+    :param nom: The name of the parameter to search for.
+    :return: The ID of the parameter if found, None otherwise.
+    """
+    # Construct the full URL for the API request
+    api_url = f"{sandre_api_url}{referenciel_api_url}{code}.json?outputSchema=SANDREv4"
 
-getNomParametre("1062")
+    data = getAPIdata(api_url)
+    return data['REFERENTIELS']['Referentiel']['Parametre'][0]['NomParametre']
+
+
+#Format dates "YYYY-MM-DD hh:mm:ss"
+def getMeasureDepartment(departement, parameter=None, size=None, date_max_prelevement=None, date_min_prelevement=None):
+    api_url = f"{hubeau_api_url}{eauPotable_api_url}?code_departement={departement}"
+    if parameter:
+        api_url += f"&code_parametre={parameter}"
+    if size:
+        api_url += f"&size={size}"
+    if date_max_prelevement:
+        api_url += f"&date_max_prelevement={date_max_prelevement}"
+    if date_min_prelevement:
+        api_url += f"&date_min_prelevement={date_min_prelevement}"
+    #print(api_url)
+    data = getAPIdata(api_url)
+
+    return data
