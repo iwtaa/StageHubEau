@@ -1,4 +1,5 @@
 src/playground.py
 **.json
+**.geojson
 **/__pycache__/
 **/*.pyc
