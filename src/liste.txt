@@ -4,6 +4,7 @@ Le référentiel "Groupes de paramètres" est ensuite mobilisé pour récupérer
 et aux fonctions (herbicides, insecticides, fongicides, etc.) associées au code paramètre.
 
 https://www.data.gouv.fr/fr/datasets/resultats-du-controle-sanitaire-de-leau-distribuee-commune-par-commune/#/community-reuses
+https://hubeau.eaufrance.fr/page/api-qualite-eau-potable
 Toutes les quelques jours a quelques mois
 Par commune
 API data gouv
