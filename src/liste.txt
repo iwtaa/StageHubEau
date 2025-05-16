@@ -1,8 +1,7 @@
-https://www.sandre.eaufrance.fr/api-referentiel
-Normes de reference des donnees sur la qualite de l'eau.
-Chaques mesures est un parametre, auquel est assigne un code.
-Base de donnees des parametres, et des elements geographiques lie aux points d'eau 
-(communes, rivieres, bassins, etc)
+Référentiels Sandre (https://www.sandre.eaufrance.fr/api-referentiel) - OFB/OIEau : 
+le référentiel "Paramètres" est utilisé pour récupérer le code paramètre associé à la substance. 
+Le référentiel "Groupes de paramètres" est ensuite mobilisé pour récupérer les informations relatives à la famille chimique 
+et aux fonctions (herbicides, insecticides, fongicides, etc.) associées au code paramètre.
 
 https://www.data.gouv.fr/fr/datasets/resultats-du-controle-sanitaire-de-leau-distribuee-commune-par-commune/#/community-reuses
 Toutes les quelques jours a quelques mois
@@ -33,12 +32,25 @@ Liste de parametres:
 https://www.data.gouv.fr/fr/datasets/resultats-du-controle-sanitaire-de-leau-du-robinet/
 
 
+
+https://www.data.gouv.fr/fr/datasets/base-de-connaissances-sur-les-produits-phytopharmaceutiques-a-partir-de-sources-ouvertes-c3po/
+Liste des references des substances phytopharmaceutiques.
+
+https://www.data.gouv.fr/fr/datasets/achats-de-pesticides-par-code-postal/
+https://ventes-produits-phytopharmaceutiques.eaufrance.fr/search
+Tout les ans (via les bilan des entreprises)
+Achat de produits phytopharmaceutiques par code postal, permet d'en deduire la quantite utilise par code postal.
+La base de donnees est traite pour minimiser au maximum la reconnaissance d'acheteurs. Par consequents, certaines donnees sont non communique au niveau regional
+mais uniquement au niveau departemental regional ou national.
+
+
 https://ades.eaufrance.fr/Recherche/Index/QualitometreAvance?g=9220e3
 Pas d'API
 Qualitometres d'eau souteraine
 
-
-https://www.data.gouv.fr/fr/datasets/base-de-connaissances-sur-les-produits-phytopharmaceutiques-a-partir-de-sources-ouvertes-c3po/
-https://www.data.gouv.fr/fr/datasets/achats-de-pesticides-par-code-postal/
 https://hubeau.eaufrance.fr/page/api-qualite-nappes
 https://hubeau.eaufrance.fr/page/api-qualite-cours-deau
+API de la base de donnees d'ADES, sur les nappes et cours d'eau.
+
+https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000274485/2022-11-28/
+Criteres d'eau potable
