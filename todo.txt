@@ -1,4 +1,8 @@
 (A) Contacter prof pour la @conventionstage t:2025-05-16
-(B) @explorer et lister toutes les +api
+x 2025-05-16 2025-05-16 @explorer et lister toutes les +api pri:B
 (C) Faire le model du +rapport de stage
 x 2025-05-15 2025-05-15 Faire la @conventionstage . Verifier dates, nums, et rediger sujet et intitule  t:2025-05-19 pri:A
+(B) @explorer la +visualisation d'une carte de france/departement
+(B) Utiliser les differentes +api en code
+x 2025-05-16 2025-05-16 @explorer les conditions legale d'une eau potable pri:B
+(B) Coder une fonction qui retourne la @potabilite officielle, sur les resultats de l' +api 
