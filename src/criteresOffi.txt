@@ -1,0 +1,34 @@
+Code    Min     Max     Unite       Nom                                                             
+
+----------------------------------------------Limites de qualité microbiologiques----------------------------------------------
+1449    0       0       n/250ml     Escherichia coli (E. coli)
+6455    0       0       n/250ml     Entérocoques
+6274    0       0       n/50ml      Bactéries sulfito-réductrices, y compris les spores     (bacteries uniquement  6285)
+1046    0       0       n/250ml     Pseudomonas aeruginosa
+1447    0       0       n/250ml     Coliformes totaux
+5440    0       100     n/ml        Numération de germes aérobies revivifiables mesurés à 22 oC
+1041    0       20      n/ml        Numération de germes aérobies revivifiables mesurés à 37 oC        (30  8248, 20  1040, 36  5441)
+Microorganismes pathogènes (*) : Cryptosporidium, Giardia, Legionella species et Legionella pneumophila
+
+--------Limites de qualité physico-chimiques de l'eau minérale naturelle conditionnée ou distribuée en buvette publique--------
+1376    0       5,0     µg/l        Antimoine.          (antimoine 125?  6063)
+1369    0       10      µg/l        Arsenic total.
+1396    0       1,0     mg/l        Baryum
+1362    0       inf     mg/l        Bore                (Bore11?  1818)
+1388    0       3,0     µg/l        Cadmium
+1389    0       50      µg/l        Chrome              (Chrome51? 7976)
+1392    0       1,0     mg/l        Cuivre
+        0       70      µg/l        Cyanures            (Cyanure Libre:  1084    Cyanure Totaux:  1390)
+        0       5,0     mg/l        Fluorures                   (de sulfuryle 	5637        anion 	7073)
+1382    0       10      µg/l        Plomb               (212 210 211 214 oxydes)
+1394    0       500     µg/l        Manganèse           (54 echangeable)
+1387    0       1,0     µg/l        Mercure
+1386    0       20      µg/l        Nickel              (assimilable)
+1340    0       50      mg/l        Nitrates
+1339    0       0,1     mg/l        Nitrites
+1385    0       10      µg/l        Sélénium
+
+
+Couleur.    mg/l (Pt)
+
+Odeur et saveur
