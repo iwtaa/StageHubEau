@@ -2,8 +2,11 @@
 x 2025-05-16 2025-05-16 @explorer et lister toutes les +api pri:B
 (C) Faire le model du +rapport de stage
 x 2025-05-15 2025-05-15 Faire la @conventionstage . Verifier dates, nums, et rediger sujet et intitule  t:2025-05-19 pri:A
-(B) @explorer la visualisation d'une +carte de france/departement
+(C) @explorer la visualisation d'une +carte de france/departement
 x 2025-05-16 2025-05-16 Utiliser les differentes +api en code pri:B
 x 2025-05-16 2025-05-16 @explorer les conditions legale d'une eau potable pri:B
 x 2025-05-19 2025-05-19 Coder une fonction qui retourne la @potabilite officielle, sur les resultats de l' +api  pri:B
 x 2025-05-19 2025-05-19 Lister tout les parametres sur la @potabilite pour les afficher sur une +carte pri:B
+(B) @explorer toutes les mesures de substances sur la +carte 
+(B) @explorer des correlations entre les mesures
+(B) @explorer les periodes pour la @potabilite
