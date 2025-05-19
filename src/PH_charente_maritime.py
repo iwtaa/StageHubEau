@@ -8,7 +8,7 @@ from APIcalls import *
 import pprint
 
 departement = '17'
-parameter = '1340'
+parameter = ['1340']
 date_max_prelevement = '2025-01-01 00:00:00'
 date_min_prelevement = '2024-08-01 00:00:00'
 
@@ -71,7 +71,9 @@ try:
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0.1, vmax=50))
     sm._A = []  # Fix for the ScalarMappable error
     cbar = fig.colorbar(sm, ax=ax)
-    cbar.set_label('Value')
+    cbar.set_label('Value (ml)')
+
+    plt.title(f"Nitrates dans l'eau potable (ml)\n{date_min_prelevement[:-9]} - {date_max_prelevement[:-9]}")
     
     plt.show()
 
