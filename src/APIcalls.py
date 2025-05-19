@@ -64,10 +64,27 @@ def getNomParametre(code):
 
 
 #Format dates "YYYY-MM-DD hh:mm:ss"
-def getMeasureDepartment(departement, parameter=None, size=None, date_max_prelevement=None, date_min_prelevement=None):
+def getMeasureDepartment(departement, parameter=[], size=None, date_max_prelevement=None, date_min_prelevement=None):
     api_url = f"{hubeau_api_url}{eauPotable_api_url}?code_departement={departement}"
-    if parameter:
-        api_url += f"&code_parametre={parameter}"
+    if len(parameter) != 0:
+        params_str = ",".join(map(str, parameter))
+        api_url += f"&code_parametre={params_str}"
+    if size:
+        api_url += f"&size={size}"
+    if date_max_prelevement:
+        api_url += f"&date_max_prelevement={date_max_prelevement}"
+    if date_min_prelevement:
+        api_url += f"&date_min_prelevement={date_min_prelevement}"
+    print(api_url)
+    data = getAPIdata(api_url)
+
+    return data
+
+def getMeasureCommune(commune, parameters=[], size=None, date_max_prelevement=None, date_min_prelevement=None):
+    if not parameters:
+        return None
+    params_str = ",".join(map(str, parameters))
+    api_url = f"{hubeau_api_url}{eauPotable_api_url}?code_commune={commune}&code_parametre={params_str}"
     if size:
         api_url += f"&size={size}"
     if date_max_prelevement:
@@ -76,5 +93,19 @@ def getMeasureDepartment(departement, parameter=None, size=None, date_max_prelev
         api_url += f"&date_min_prelevement={date_min_prelevement}"
     #print(api_url)
     data = getAPIdata(api_url)
+    return data
+
+def getDepartementCommunes(departement):
+    api_url = f'https://geo.api.gouv.fr/departements/{departement}/communes?'
+    data = getAPIdata(api_url)
+    return data
+
+
+def getNumericalMeasureDepartment(departement, parameter=None, size=None, date_max_prelevement=None, date_min_prelevement=None):
+    data = getMeasureDepartment(departement, parameter, size, date_max_prelevement, date_min_prelevement)
+    if data is None:
+        return None
+    # Extract the relevant data from the response
+
 
     return data
