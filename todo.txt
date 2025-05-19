@@ -5,5 +5,5 @@ x 2025-05-15 2025-05-15 Faire la @conventionstage . Verifier dates, nums, et red
 (B) @explorer la visualisation d'une +carte de france/departement
 x 2025-05-16 2025-05-16 Utiliser les differentes +api en code pri:B
 x 2025-05-16 2025-05-16 @explorer les conditions legale d'une eau potable pri:B
-(B) Coder une fonction qui retourne la @potabilite officielle, sur les resultats de l' +api 
-(B) Lister tout les parametres sur la @potabilite pour les afficher sur une +carte
+x 2025-05-19 2025-05-19 Coder une fonction qui retourne la @potabilite officielle, sur les resultats de l' +api  pri:B
+x 2025-05-19 2025-05-19 Lister tout les parametres sur la @potabilite pour les afficher sur une +carte pri:B
