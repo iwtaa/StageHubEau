@@ -1,41 +1,32 @@
 import colorsys
 from APIcalls import *
 import numpy as np
+import pandas as pd
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
 from APIcalls import *
 import pprint
 
+criteres = pd.read_csv('src/criteres.csv', sep=',')
+parametres = criteres["parametre"].tolist()
+criteres_dict = {
+    row['parametre']: {key: row[key] for key in row.index if key != 'parametre'}
+    for _, row in criteres.iterrows()
+}
+
 departement = '17'
-parameter = ['1340']
 date_max_prelevement = '2025-01-01 00:00:00'
-date_min_prelevement = '2024-08-01 00:00:00'
-
-data = getMeasureDepartment(departement, parameter=parameter, date_max_prelevement=date_max_prelevement, date_min_prelevement=date_min_prelevement)
-
-average_communes = {}
-communes = {}
-for measure in data['data']:
-    if measure['code_commune'] in communes:
-        communes[measure['code_commune']].append(measure['resultat_numerique'])
-    else:
-        communes[measure['code_commune']] = [measure['resultat_numerique']]
-
-average_communes = {key: np.mean(value) for key, value in communes.items()}
+date_min_prelevement = '2023-01-01 00:00:00'
 
 data = getAPIdata(f'https://geo.api.gouv.fr/departements/{departement}/communes?format=geojson&geometry=contour')
 gdf = gpd.GeoDataFrame.from_features(data['features'])
-def get_color(code):
+def get_color(code, min_val, max_val):
     if code not in average_communes:
-        number = 0.0
+        return 'black'
     else:
         number = average_communes[code]
-    min_val = 0.1
-    max_val = 50.0
-    if number == 0.0:
-        return 'black'
-    elif number < min_val:
+    if number < min_val:
         return 'blue'
     elif number > max_val:
         return 'red'
@@ -48,8 +39,7 @@ def get_color(code):
         r, g, b = colorsys.hls_to_rgb(hue, 0.5, 1)  # Use HSL: Hue, Saturation, Lightness
         return (r, g, b)
 
-
-def plot_geodata(gdf, get_color):
+def plot_geodata(gdf, get_color, min, max, name):
     """
     Plots the GeoDataFrame using the provided get_color lambda to assign a color for each geometry.
     
@@ -59,7 +49,7 @@ def plot_geodata(gdf, get_color):
     """
     try:
         # Apply the lambda to compute a color for each row based on its 'code'
-        gdf['color'] = gdf.apply(lambda row: get_color(row['code']), axis=1)
+        gdf['color'] = gdf.apply(lambda row: get_color(row['code'], min, max), axis=1)
 
         import matplotlib.pyplot as plt
         import matplotlib.colors as mcolors
@@ -74,17 +64,36 @@ def plot_geodata(gdf, get_color):
         cmap = mcolors.LinearSegmentedColormap.from_list("mycmap", ["green", "yellow", "red"])
 
         # Create the scalar mappable for the colorbar (using fixed vmin and vmax)
-        sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0.1, vmax=50))
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=min, vmax=max))
         sm._A = []  # Necessary workaround to avoid errors
 
         # Add and label the colorbar to the figure
         cbar = fig.colorbar(sm, ax=ax)
         cbar.set_label('Value (ml)')
 
-        plt.title("Geopandas Plot")
+        plt.title(f"{name} in {departement}")
         plt.show()
 
     except Exception as e:
         print(f"An error occurred while plotting: {e}")
 
-plot_geodata(gdf, get_color)
+for param in parametres:
+    parametre = [param]
+    min = criteres_dict[param]['min']
+    max = criteres_dict[param]['max']
+    # Example usage
+
+    data = getMeasureDepartment(departement, parameter=parametre, date_max_prelevement=date_max_prelevement, date_min_prelevement=date_min_prelevement)
+
+    average_communes = {}
+    communes = {}
+    for measure in data['data']:
+        if measure['resultat_numerique'] is not None:
+            if measure['code_commune'] in communes:
+                
+                communes[measure['code_commune']].append(measure['resultat_numerique'])
+            else:
+                communes[measure['code_commune']] = [measure['resultat_numerique']]
+
+    average_communes = {key: np.mean(value) for key, value in communes.items()}
+    plot_geodata(gdf, get_color, min, max, criteres_dict[param]['name'])
