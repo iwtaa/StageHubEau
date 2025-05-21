@@ -40,7 +40,7 @@ def getAPIdata(api_url):
 
         # Process the response
         if response.status_code == 200 or response.status_code == 206:
-            print("Request was successful")
+            #print("Request was successful")
             return response.json()  # Assuming the response is in JSON format
         else:
             print(f"Request failed with status code {response.status_code}")
@@ -58,8 +58,12 @@ def getNomParametre(code):
     """
     # Construct the full URL for the API request
     api_url = f"{sandre_api_url}{referenciel_api_url}{code}.json?outputSchema=SANDREv4"
-
     data = getAPIdata(api_url)
+    if data is None:
+        return None
+    if 'Parametre' not in data['REFERENTIELS']['Referentiel']:
+        print(f"Parameter {code} not found in the response.")
+        return None
     return data['REFERENTIELS']['Referentiel']['Parametre'][0]['NomParametre']
 
 
