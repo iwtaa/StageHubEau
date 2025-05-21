@@ -1,99 +1,125 @@
 import colorsys
-from APIcalls import *
 import numpy as np
 import pandas as pd
-
 import geopandas as gpd
 import matplotlib.pyplot as plt
-from APIcalls import *
-import pprint
+import matplotlib.colors as mcolors
+from APIcalls import getAPIdata, getMeasureDepartment
 
-criteres = pd.read_csv('src/criteres.csv', sep=',')
-parametres = criteres["parametre"].tolist()
-criteres_dict = {
-    row['parametre']: {key: row[key] for key in row.index if key != 'parametre'}
-    for _, row in criteres.iterrows()
-}
+def load_criteria(csv_path):
+    """Loads criteria from a CSV file and returns a dictionary."""
+    criteres = pd.read_csv(csv_path, sep=',')
+    criteres_dict = {
+        row['parametre']: {key: row[key] for key in row.index if key != 'parametre'}
+        for _, row in criteres.iterrows()
+    }
+    return criteres_dict
 
-departement = '17'
-date_max_prelevement = '2025-01-01 00:00:00'
-date_min_prelevement = '2023-01-01 00:00:00'
+def fetch_geodata(departement_code):
+    """Fetches GeoJSON data for a given department code."""
+    data = getAPIdata(f'https://geo.api.gouv.fr/departements/{departement_code}/communes?format=geojson&geometry=contour')
+    gdf = gpd.GeoDataFrame.from_features(data['features'])
+    return gdf
 
-data = getAPIdata(f'https://geo.api.gouv.fr/departements/{departement}/communes?format=geojson&geometry=contour')
-gdf = gpd.GeoDataFrame.from_features(data['features'])
-def get_color(code, min_val, max_val):
-    if code not in average_communes:
-        return 'black'
-    else:
-        number = average_communes[code]
-    if number < min_val:
-        return 'blue'
-    elif number > max_val:
-        return 'red'
-    else:
-        # Normalize the value to a range between 0 and 1
-        normalized_value = (number - min_val) / (max_val - min_val)
-        # Convert the normalized value to a hue value (0=red, 1/6=yellow, 1/3=green)
-        hue = (0.33) - (normalized_value * (0.33))
-        # Convert the HSL color to RGB
-        r, g, b = colorsys.hls_to_rgb(hue, 0.5, 1)  # Use HSL: Hue, Saturation, Lightness
-        return (r, g, b)
-
-def plot_geodata(gdf, get_color, min, max, name):
-    """
-    Plots the GeoDataFrame using the provided get_color lambda to assign a color for each geometry.
-    
-    Parameters:
-      gdf (GeoDataFrame): The geodataframe to plot. Must contain a column 'code' to compute colors.
-      get_color (lambda): A lambda function that takes a commune code and returns a color.
-    """
-    try:
-        # Apply the lambda to compute a color for each row based on its 'code'
-        gdf['color'] = gdf.apply(lambda row: get_color(row['code'], min, max), axis=1)
-
-        import matplotlib.pyplot as plt
-        import matplotlib.colors as mcolors
-        
-        # Create the figure and axes
-        fig, ax = plt.subplots(1, 1)
-        
-        # Plot the GeoDataFrame with the assigned colors
-        gdf.plot(color=gdf['color'], ax=ax)
-
-        # Define the colormap for the colorbar
-        cmap = mcolors.LinearSegmentedColormap.from_list("mycmap", ["green", "yellow", "red"])
-
-        # Create the scalar mappable for the colorbar (using fixed vmin and vmax)
-        sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=min, vmax=max))
-        sm._A = []  # Necessary workaround to avoid errors
-
-        # Add and label the colorbar to the figure
-        cbar = fig.colorbar(sm, ax=ax)
-        cbar.set_label('Value (ml)')
-
-        plt.title(f"{name} in {departement}")
-        plt.show()
-
-    except Exception as e:
-        print(f"An error occurred while plotting: {e}")
-
-for param in parametres:
-    parametre = [param]
-    min = criteres_dict[param]['min']
-    max = criteres_dict[param]['max']
-    # Example usage
-
-    data = getMeasureDepartment(departement, parameter=parametre, date_max_prelevement=date_max_prelevement, date_min_prelevement=date_min_prelevement)
-
-    average_communes = {}
+def calculate_average_values(data):
+    """Calculates the average value for each commune from the API data."""
     communes = {}
     for measure in data['data']:
         if measure['resultat_numerique'] is not None:
-            if measure['code_commune'] in communes:
-                
-                communes[measure['code_commune']].append(measure['resultat_numerique'])
+            code_commune = measure['code_commune']
+            resultat = measure['resultat_numerique']
+            if code_commune in communes:
+                communes[code_commune].append(resultat)
             else:
-                communes[measure['code_commune']] = [measure['resultat_numerique']]
-
+                communes[code_commune] = [resultat]
     average_communes = {key: np.mean(value) for key, value in communes.items()}
-    plot_geodata(gdf, get_color, min, max, criteres_dict[param]['name'])
+    return average_communes
+
+def fetch_measurements(departement, parametre, date_min_prelevement, date_max_prelevement):
+    """Fetches measurement data from the API for a given department and parameter."""
+    data = getMeasureDepartment(departement, parameter=parametre, date_max_prelevement=date_max_prelevement, date_min_prelevement=date_min_prelevement)
+    return data
+
+def get_color(value, min_val, max_val):
+    """Assigns a color based on the given value and min/max thresholds."""
+    if value < min_val:
+        return 'blue'
+    elif value > max_val:
+        return 'red'
+    else:
+        normalized_value = (value - min_val) / (max_val - min_val)
+        hue = (0.33) - (normalized_value * (0.33))
+        r, g, b = colorsys.hls_to_rgb(hue, 0.5, 1)
+        return (r, g, b)
+
+def plot_geodata(gdf, average_communes, min_val, max_val, plot_title):
+    """Plots the GeoDataFrame with colors based on average values and displays a colorbar."""
+    def get_geometry_color(code, min_val, max_val):
+        if code not in average_communes:
+            return 'black'
+        else:
+            number = average_communes[code]
+            return get_color(number, min_val, max_val)
+
+    gdf['color'] = gdf.apply(lambda row: get_geometry_color(row['code'], min_val, max_val), axis=1)
+
+    fig, ax = plt.subplots(1, 1)
+    gdf.plot(color=gdf['color'], ax=ax)
+
+    cmap = mcolors.LinearSegmentedColormap.from_list("mycmap", ["green", "yellow", "red"])
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=min_val, vmax=max_val))
+    sm._A = []
+
+    cbar = fig.colorbar(sm, ax=ax)
+    cbar.set_label('Value (ml)')
+
+    plt.title(plot_title)
+    plt.show()
+
+def save_geodata(gdf, average_communes, min_val, max_val, plot_title, output_path, unit):
+    """Saves the GeoDataFrame plot with colors based on average values to a file."""
+    def get_geometry_color(code, min_val, max_val):
+        if code not in average_communes:
+            return 'black'
+        else:
+            number = average_communes[code]
+            return get_color(number, min_val, max_val)
+
+    gdf['color'] = gdf.apply(lambda row: get_geometry_color(row['code'], min_val, max_val), axis=1)
+
+    fig, ax = plt.subplots(1, 1)
+    gdf.plot(color=gdf['color'], ax=ax)
+
+    cmap = mcolors.LinearSegmentedColormap.from_list("mycmap", ["green", "yellow", "red"])
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=min_val, vmax=max_val))
+    sm._A = []
+
+    cbar = fig.colorbar(sm, ax=ax)
+    cbar.set_label(unit)
+
+    plt.title(plot_title)
+    plt.savefig(output_path)
+    plt.close()
+
+def main():
+    """Main function to orchestrate the data fetching, processing, and plotting."""
+    csv_path = 'src/criteres.csv'
+    departement_code = '17'
+    date_max_prelevement = '2025-01-01 00:00:00'
+    date_min_prelevement = '2020-01-01 00:00:00'
+
+    criteres_dict = load_criteria(csv_path)
+    gdf = fetch_geodata(departement_code)
+
+    for param in criteres_dict:
+        parametre = [param]
+        min_val = criteres_dict[param]['min']
+        max_val = criteres_dict[param]['max']
+        plot_title = f"{criteres_dict[param]['name']} in {departement_code}"
+
+        data = fetch_measurements(departement_code, parametre, date_min_prelevement, date_max_prelevement)
+        average_communes = calculate_average_values(data)
+        plot_geodata(gdf, average_communes, min_val, max_val, plot_title)
+
+if __name__ == "__main__":
+    main()
