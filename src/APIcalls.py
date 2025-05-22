@@ -1,6 +1,7 @@
 import pprint
 import requests
 import json
+import csv
 
 # Define the API endpoint URL
 hubeau_api_url = "https://hubeau.eaufrance.fr/api"
@@ -66,6 +67,15 @@ def getNomParametre(code):
         return None
     return data['REFERENTIELS']['Referentiel']['Parametre'][0]['NomParametre']
 
+def getAllParametres(start=1, end=99999):
+    """
+    Function to get all parameters from the SANDRE API and save them to a CSV file.
+    :param start: The starting code of the parameter to search for.
+    :param end: The ending code of the parameter to search for.
+    """
+    api_url = f"{sandre_api_url}{referenciel_api_url}{code}.csv?outputSchema=SANDREv4"
+    data = getAPIdata(api_url)
+    
 
 #Format dates "YYYY-MM-DD hh:mm:ss"
 def getMeasureDepartment(departement, parameter=[], size=None, date_max_prelevement=None, date_min_prelevement=None):
