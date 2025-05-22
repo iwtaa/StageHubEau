@@ -16,3 +16,4 @@ src/playground.py
 *.pdf
 data/*
 maps/*
+plots/*
