@@ -4,95 +4,78 @@ import pandas as pd
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-from APIcalls import getAPIdata, getMeasureDepartment
+from tqdm import tqdm
+import requests
+import io
 
-def load_criteria(csv_path):
-    """Loads criteria from a CSV file and returns a dictionary."""
-    criteres = pd.read_csv(csv_path, sep=',')
-    criteres_dict = {
-        row['parametre']: {key: row[key] for key in row.index if key != 'parametre'}
-        for _, row in criteres.iterrows()
-    }
-    return criteres_dict
+def load_data(plv_path='DIS_PLV_2024.txt', result_path='DIS_RESULT_2024.txt'):
+    """Loads and preprocesses data from text files."""
+    plv = pd.read_csv(plv_path, sep=',', encoding='latin-1', usecols=['referenceprel', 'inseecommuneprinc'])
+    result = pd.read_csv(result_path, sep=',', encoding='latin-1', usecols=['referenceprel', 'cdparametre', 'valtraduite', 'cdunitereferencesiseeaux'])
 
-def fetch_geodata(departement_code):
+    plv = plv[plv['referenceprel'].isin(result['referenceprel'])]
+    result = result[result['referenceprel'].isin(plv['referenceprel'])]
+
+    result['cdparametre'] = result['cdparametre'].astype(str).str[:-2]
+    
+    merged = pd.merge(result, plv, on='referenceprel', how='inner')
+    
+    cdparametre_counts = merged['cdparametre'].value_counts()
+    valid_cdparametre = cdparametre_counts[cdparametre_counts >= 250].index
+    merged = merged[merged['cdparametre'].isin(valid_cdparametre)]
+    
+    merged.dropna(inplace=True)
+    return merged
+
+def fetch_geodata(departement_code='17'):
     """Fetches GeoJSON data for a given department code."""
-    data = getAPIdata(f'https://geo.api.gouv.fr/departements/{departement_code}/communes?format=geojson&geometry=contour')
+    url = f'https://geo.api.gouv.fr/departements/{departement_code}/communes?format=geojson&geometry=contour'
+    response = requests.get(url)
+    response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+    data = response.json()
     gdf = gpd.GeoDataFrame.from_features(data['features'])
+    gdf.rename(columns={'code': 'inseecommuneprinc'}, inplace=True)
+    gdf['inseecommuneprinc'] = gdf['inseecommuneprinc'].astype(str)
     return gdf
 
-def calculate_average_values(data):
-    """Calculates the average value for each commune from the API data."""
-    communes = {}
-    for measure in data['data']:
-        if measure['resultat_numerique'] is not None:
-            code_commune = measure['code_commune']
-            resultat = measure['resultat_numerique']
-            if code_commune in communes:
-                communes[code_commune].append(resultat)
-            else:
-                communes[code_commune] = [resultat]
-    average_communes = {key: np.mean(value) for key, value in communes.items()}
-    return average_communes
-
-def fetch_measurements(departement, parametre, date_min_prelevement, date_max_prelevement):
-    """Fetches measurement data from the API for a given department and parameter."""
-    data = getMeasureDepartment(departement, parameter=parametre, date_max_prelevement=date_max_prelevement, date_min_prelevement=date_min_prelevement)
-    return data
-
-def get_color(value, min_val, max_val):
-    """Assigns a color based on the given value and min/max thresholds."""
-    if value < min_val:
-        return 'blue'
-    elif value > max_val:
-        return 'red'
-    else:
-        normalized_value = (value - min_val) / (max_val - min_val)
-        hue = (0.33) - (normalized_value * (0.33))
-        r, g, b = colorsys.hls_to_rgb(hue, 0.5, 1)
-        return (r, g, b)
-
-def plot_geodata(gdf, average_communes, min_val, max_val, plot_title):
-    """Plots the GeoDataFrame with colors based on average values and displays a colorbar."""
-    def get_geometry_color(code, min_val, max_val):
-        if code not in average_communes:
-            return 'black'
+def get_nom_parametre(code):
+    """Fetches the name of a parameter from the API."""
+    try:
+        response = requests.get(f'https://hubeau.eaufrance.fr/api/v3/parametres/{code}')
+        response.raise_for_status()
+        data = response.json()
+        if data['count'] > 0:
+            return data['data'][0]['nom_parametre']
         else:
-            number = average_communes[code]
-            return get_color(number, min_val, max_val)
+            return None
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching parameter {code}: {e}")
+        return None
 
-    gdf['color'] = gdf.apply(lambda row: get_geometry_color(row['code'], min_val, max_val), axis=1)
+def assign_colors(gdf, average_communes, min_val, max_val):
+    """Assigns colors to GeoDataFrame based on average values."""
+    def get_color(value, min_val, max_val):
+        if value < min_val:
+            return 'blue'
+        elif value > max_val:
+            return 'red'
+        else:
+            normalized_value = (value - min_val) / (max_val - min_val)
+            hue = (0.33) - (normalized_value * (0.33))
+            r, g, b = colorsys.hls_to_rgb(hue, 0.5, 1)
+            return (r, g, b)
 
+    gdf['color'] = gdf['inseecommuneprinc'].map(lambda code: 'black' if code not in average_communes else get_color(average_communes[code], min_val, max_val))
+    return gdf
+
+def plot_and_save(gdf, min_val, max_val, plot_title, output_path, unit):
+    """Plots and saves the GeoDataFrame with colors based on average values."""
     fig, ax = plt.subplots(1, 1)
     gdf.plot(color=gdf['color'], ax=ax)
 
     cmap = mcolors.LinearSegmentedColormap.from_list("mycmap", ["green", "yellow", "red"])
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=min_val, vmax=max_val))
-    sm._A = []
-
-    cbar = fig.colorbar(sm, ax=ax)
-    cbar.set_label('Value (ml)')
-
-    plt.title(plot_title)
-    plt.show()
-
-def save_geodata(gdf, average_communes, min_val, max_val, plot_title, output_path, unit):
-    """Saves the GeoDataFrame plot with colors based on average values to a file."""
-    def get_geometry_color(code, min_val, max_val):
-        if code not in average_communes:
-            return 'black'
-        else:
-            number = average_communes[code]
-            return get_color(number, min_val, max_val)
-
-    gdf['color'] = gdf.apply(lambda row: get_geometry_color(row['code'], min_val, max_val), axis=1)
-
-    fig, ax = plt.subplots(1, 1)
-    gdf.plot(color=gdf['color'], ax=ax)
-
-    cmap = mcolors.LinearSegmentedColormap.from_list("mycmap", ["green", "yellow", "red"])
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=min_val, vmax=max_val))
-    sm._A = []
+    sm.set_array([])
 
     cbar = fig.colorbar(sm, ax=ax)
     cbar.set_label(unit)
@@ -101,25 +84,51 @@ def save_geodata(gdf, average_communes, min_val, max_val, plot_title, output_pat
     plt.savefig(output_path)
     plt.close()
 
-def main():
-    """Main function to orchestrate the data fetching, processing, and plotting."""
-    csv_path = 'src/criteres.csv'
+if __name__ == "__main__":
     departement_code = '17'
-    date_max_prelevement = '2025-01-01 00:00:00'
-    date_min_prelevement = '2020-01-01 00:00:00'
-
-    criteres_dict = load_criteria(csv_path)
+    
+    df_merged = load_data()
     gdf = fetch_geodata(departement_code)
 
-    for param in criteres_dict:
-        parametre = [param]
-        min_val = criteres_dict[param]['min']
-        max_val = criteres_dict[param]['max']
-        plot_title = f"{criteres_dict[param]['name']} in {departement_code}"
+    min_by_parametre = df_merged.groupby('cdparametre')['valtraduite'].min().to_dict()
+    max_by_parametre = df_merged.groupby('cdparametre')['valtraduite'].max().to_dict()
+    unit_by_parametre = df_merged.groupby('cdparametre')['cdunitereferencesiseeaux'].first().to_dict()
 
-        data = fetch_measurements(departement_code, parametre, date_min_prelevement, date_max_prelevement)
-        average_communes = calculate_average_values(data)
-        plot_geodata(gdf, average_communes, min_val, max_val, plot_title)
+    gdf['inseecommuneprinc'] = gdf['inseecommuneprinc'].astype(str)
+    df_merged['inseecommuneprinc'] = df_merged['inseecommuneprinc'].astype(str)
+    
+    # Filter out parameters with 'SANS OBJET' unit
+    valid_parameters = [parametre for parametre in df_merged['cdparametre'].unique() 
+                          if unit_by_parametre.get(parametre) != 'SANS OBJET']
 
-if __name__ == "__main__":
-    main()
+    for parametre in tqdm(valid_parameters, desc="Processing parameters"):
+        unit = unit_by_parametre[parametre]
+        
+        # Fetch parameter name and skip if not found
+        critere = get_nom_parametre(parametre)
+        if critere is None:
+            print(f"Parameter {parametre} not found in the API.")
+            continue
+        
+        # Get min and max values, skip if max is 0
+        min_val = min_by_parametre[str(parametre)]
+        max_val = max_by_parametre[str(parametre)]
+        if max_val == 0:
+            continue
+            
+        # Further filter the DataFrame to remove NaN values for the specific parameter
+        df_param = df_merged[df_merged['cdparametre'] == parametre].dropna(subset=['valtraduite', 'inseecommuneprinc'])
+        
+        # Skip if there are fewer than 250 valid entries for this parameter
+        if len(df_param) < 250:
+            continue
+            
+        # Calculate average value per commune
+        average_by_insee = df_param.groupby('inseecommuneprinc')['valtraduite'].mean().to_dict()
+        
+        gdf_copy = gdf.copy()
+        gdf_copy = assign_colors(gdf_copy, average_by_insee, min_val, max_val)
+
+        plot_title = f"{critere} in {departement_code}"
+        output_path = f'maps/{departement_code}_{critere}.png'
+        plot_and_save(gdf_copy, min_val, max_val, plot_title, output_path, unit)
