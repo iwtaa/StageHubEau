@@ -15,7 +15,7 @@ PAR_20250522_SANDRE_short.csv Header: ['CdParametre', 'NomParametre', 'DfParamet
 def merge_and_extract_data(output_filename='data/merged_data.csv',
                            dept_index = 17,
                            plv_indices=[0, 2, 3, 8, 9],
-                           result_indices=[3, 11, 12, 14],
+                           result_indices=[3, 10, 12, 14],
                            par_indices=[1, 4],
                            join_index_plv=7,
                            join_index_result=1,
@@ -41,7 +41,9 @@ def merge_and_extract_data(output_filename='data/merged_data.csv',
                 for row in reader:
                     if len(row) > join_index_plv:
                         key = row[join_index_plv]
-                        plv_data[key] = [row[i] for i in plv_indices if i < len(row)]
+                        if key not in plv_data:
+                            plv_data[key] = []  # Initialize as a list
+                        plv_data[key].append([row[i] for i in plv_indices if i < len(row)])
                     else:
                         print(f"Skipping row in {plv_filename} due to insufficient length.")
         except FileNotFoundError:
@@ -62,7 +64,9 @@ def merge_and_extract_data(output_filename='data/merged_data.csv',
                 for row in reader:
                     if len(row) > join_index_result:
                         key = row[join_index_result]
-                        result_data[key] = [row[i] for i in result_indices if i < len(row)]
+                        if key not in result_data:
+                            result_data[key] = []  # Initialize as a list
+                        result_data[key].append([row[i] for i in result_indices if i < len(row)])
                     else:
                         print(f"Skipping row in {result_filename} due to insufficient length.")
         except FileNotFoundError:
@@ -79,10 +83,9 @@ def merge_and_extract_data(output_filename='data/merged_data.csv',
         try:
             with open(par_filename, 'r', encoding='utf-8') as file:
                 reader = csv.reader(file, delimiter=';')
-                header = next(reader)  # Skip header
-                header = next(reader)  # Skip header
+                next(reader)  # Skip header
                 for row in reader:
-                    if len(row) > join_index_par:
+                    if row:
                         key = row[0]
                         par_data[key] = [row[i] for i in par_indices if i < len(row)]
                     else:
@@ -97,15 +100,17 @@ def merge_and_extract_data(output_filename='data/merged_data.csv',
             print(f"An unexpected error occurred while processing {par_filename}: {e}")
             return
 
-        # Merge data for the current year
-        for key, plv_values in plv_data.items():
-            if key in result_data:
-                result_values = result_data[key]
-                par_key = result_values[0]
-                if par_key in par_data:
-                    par_values = par_data[par_key]
-                    output_row = [plv_values[0]] + [plv_values[1]] + [plv_values[2]] + [plv_values[3]] + [plv_values[4]] + [result_values[0]] + [result_values[1]] + [result_values[2]] + [result_values[3]] + [par_values[0]] + [par_values[1]]
-                    all_merged_data.append(output_row)
+        # Exhaustive merge of data
+        for plv_key, plv_values_list in plv_data.items():
+            if plv_key in result_data:
+                result_values_list = result_data[plv_key]
+                for plv_values in plv_values_list:
+                    for result_values in result_values_list:
+                        par_key = result_values[0]
+                        if par_key in par_data:
+                            par_values = par_data[par_key]
+                            output_row = [plv_values[0]] + [plv_values[1]] + [plv_values[2]] + [plv_values[3]] + [plv_values[4]] + [result_values[0]] + [result_values[1]] + [result_values[2]] + [result_values[3]] + [par_values[0]] + [par_values[1]]
+                            all_merged_data.append(output_row)
 
     # Write all merged data to the output file
     try:
@@ -113,7 +118,7 @@ def merge_and_extract_data(output_filename='data/merged_data.csv',
             writer = csv.writer(outfile, delimiter=delimiter)
 
             # Write header
-            header = ['cddept', 'inseecommuneprinc', 'numcommuneprinc', 'dateprel', 'heureprel', 'cdparametre', 'cdunitereference', 'limitequal', 'valtraduite', 'NomParametre', 'LbCourtParametre']
+            header = ['cddept', 'inseecommuneprinc', 'numcommuneprinc', 'dateprel', 'heureprel', 'cdparametre', 'cdunitereferencesiseeaux', 'limitequal', 'valtraduite', 'NomParametre', 'LbCourtParametre']
             writer.writerow(header)
 
             # Write data rows
@@ -122,12 +127,14 @@ def merge_and_extract_data(output_filename='data/merged_data.csv',
     except Exception as e:
         print(f"An unexpected error occurred while writing to {output_filename}: {e}")
 
+
 def display_merged_data(filename='data/merged_data.csv', delimiter=','):
     try:
         df = pd.read_csv(filename, delimiter=delimiter)
-        print(df)  # Display the first few rows of the DataFrame
+        print(df)  # Display the DataFrame
         for col in df.columns:
             print(col)
+        print(f"Number of unique 'cdparametre' values: {df['cdparametre'].nunique()}")
 
     except FileNotFoundError:
         print(f"Error: File not found: {filename}")
@@ -167,7 +174,8 @@ def shorten_param_csv():
 
 
 if __name__ == '__main__':
-    #shorten_param_csv()
+    display_merged_data('data/DIS_RESULT_2024_017.txt', delimiter=',')
+    shorten_param_csv()
     merge_and_extract_data()
     display_merged_data()
-    #display_merged_data('data/PAR_20250522_SANDRE_short.csv', delimiter=';')
+    display_merged_data('data/PAR_20250522_SANDRE_short.csv', delimiter=';')
