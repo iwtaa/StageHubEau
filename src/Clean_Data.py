@@ -142,7 +142,7 @@ def display_merged_data(filename='data/merged_data.csv', delimiter=','):
         print(f"An unexpected error occurred while reading {filename}: {e}")
 
 def shorten_param_csv():
-    input_filename='data/PAR_20250522_SANDRE.csv'
+    input_filename='data/PAR_20250523_SANDRE.csv'
     output_filename='data/PAR_20250522_SANDRE_short.csv'
     delimiter=';'
     indices_to_keep=[0, 1, 6, 7, 10]
@@ -174,8 +174,6 @@ def shorten_param_csv():
 
 
 if __name__ == '__main__':
-    display_merged_data('data/DIS_RESULT_2024_017.txt', delimiter=',')
     shorten_param_csv()
     merge_and_extract_data()
     display_merged_data()
-    display_merged_data('data/PAR_20250522_SANDRE_short.csv', delimiter=';')
