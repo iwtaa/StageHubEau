@@ -4,11 +4,13 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import time
 import os
+from sklearn.linear_model import LinearRegression
 from tqdm import tqdm
 import numpy as np
 import itertools
 import seaborn as sns
 from processing_functions import *
+from scipy.signal import find_peaks
 
 # Constants
 DATA_DIR = 'data'
@@ -108,7 +110,7 @@ def map_all_parametre(df):
 
 # --- Seasonal Analysis ---
 
-def plot_time_series(df, valcol, mean=None, std=None, outlier_df=None, parametre_info=None, nom_plot='time_series'):
+def plot_time_series(df, valcol, mean=None, std=None, outlier_df=None, parametre_info=None, nom_plot='time_series', save=False):
     # Convert the date column to datetime if not already
     df.loc[:, 'dateprel'] = pd.to_datetime(df['dateprel'])
     df = df.sort_values('dateprel')
@@ -139,14 +141,17 @@ def plot_time_series(df, valcol, mean=None, std=None, outlier_df=None, parametre
     plt.tight_layout()
     plt.legend()
     
-    # Save the plot
-    path = os.path.join(PLOTS_DIR, f'{parametre_info['LbCourtParametre']}')
-    os.makedirs(path, exist_ok=True)  # Ensure the directory exists
-    plt.savefig(f'{path}/{nom_plot}.png')
-    
-    plt.close()
+    if save:
+        # Save the plot
+        path = os.path.join(PLOTS_DIR, f'{parametre_info['LbCourtParametre']}')
+        os.makedirs(path, exist_ok=True)  # Ensure the directory exists
+        plt.savefig(f'{path}/{nom_plot}.png')
+        plt.close()
+    else:
+        plt.show()
+        plt.close()
 
-def plot_monthly_average(df, valcol, parametre_info=None):
+def plot_monthly_average(df, valcol, parametre_info=None, save=False):
     # Ensure 'dateprel' is datetime
     df['dateprel'] = pd.to_datetime(df['dateprel'])
 
@@ -168,68 +173,100 @@ def plot_monthly_average(df, valcol, parametre_info=None):
     plt.tight_layout()  # Adjust layout to prevent labels from overlapping
     
     # Save the plot
-    
-    path = os.path.join(PLOTS_DIR, f'{parametre_info['LbCourtParametre']}')
-    os.makedirs(path, exist_ok=True)  # Ensure the directory exists
-    plt.savefig(f'{path}/Monthly_Average.png')
+    if save:
+        path = os.path.join(PLOTS_DIR, f'{parametre_info['LbCourtParametre']}')
+        os.makedirs(path, exist_ok=True)  # Ensure the directory exists
+        plt.savefig(f'{path}/Monthly_Average.png')
+            
+        plt.close()
+    else:
+        plt.show()
+        plt.close()
+
+def center_data_per_commune(df, parametre_info):
+    center_records = []
+    valid_records = []
+    outliers_records = []
+
+    for commune in df['inseecommuneprinc'].unique():
+        original_commune_df = df[df['inseecommuneprinc'] == commune]
+        entry_count = original_commune_df.shape[0]
         
-    plt.close()
+        if entry_count < 30:
+            continue
+
+        # Calculate bounds based on the original data
+        temp_mean = original_commune_df['valtraduite'].mean()
+        temp_std = original_commune_df['valtraduite'].std()
+        lower_bound = temp_mean - 3 * temp_std
+        upper_bound = temp_mean + 3 * temp_std
+        
+        # Separate valid data and outliers
+        valid_df = original_commune_df[(original_commune_df['valtraduite'] >= lower_bound) & 
+                                        (original_commune_df['valtraduite'] <= upper_bound)]
+        outliers_df = original_commune_df[(original_commune_df['valtraduite'] < lower_bound) | 
+                                        (original_commune_df['valtraduite'] > upper_bound)]
+        
+        
+        # Compute mean and std on the valid data
+        valid_mean = valid_df['valtraduite'].mean()
+        valid_std = valid_df['valtraduite'].std()
+
+        '''
+        plot_time_series(valid_df, 'valtraduite', outlier_df=outliers_df, mean=valid_mean, std=valid_std, parametre_info=parametre_info, nom_plot='measurement', save=False)
+        if entry_count < 30:
+            continue
+        '''
+
+        # Compute centered reduced data points and add a new column 'centered'
+        validcenter_df = valid_df.copy()
+        validcenter_df['centered'] = (validcenter_df['valtraduite'] - valid_mean) / valid_std
+        center_records.append(validcenter_df)
+
+        valid_records.append(valid_df)
+        outliers_records.append(outliers_df)
+
+        
+
+    # Combine all centered data from each commune into one dataframe
+    if not center_records:
+        return None
+    center_df = pd.concat(center_records, ignore_index=True)
+    center_df['dateprel'] = pd.to_datetime(center_df['dateprel'])
+    center_df.sort_values('dateprel', inplace=True)
+
+    return center_df, valid_records, outliers_records
 
 def analyze_and_plot(df):
     parametre_info_df = df.groupby('cdparametre').agg({'cdunitereferencesiseeaux': 'first', 'LbCourtParametre': 'first'}).reset_index()
 
-    filter_data(df)
-    for parametre in df['cdparametre'].unique():
+    for parametre in tqdm(df['cdparametre'].unique(), desc="Processing parameters"):
+        '''if parametre in [1303, 1398, 1399, 1340, 1302, 1409, 1301]:
+            continue
+        '''
         filtered_df = df[df['cdparametre'] == parametre]
         
         parametre_info = parametre_info_df[parametre_info_df['cdparametre'] == parametre].iloc[0]
-
-        # List to accumulate centered data frames for each commune
-        center_records = []
-        outliers_records = []
-
-        for commune in filtered_df['inseecommuneprinc'].unique():
-            original_commune_df = filtered_df[filtered_df['inseecommuneprinc'] == commune]
-            entry_count = original_commune_df.shape[0]
-            if entry_count < 30:
-                continue
-
-            # Calculate bounds based on the original data
-            temp_mean = original_commune_df['valtraduite'].mean()
-            temp_std = original_commune_df['valtraduite'].std()
-            lower_bound = temp_mean - 3 * temp_std
-            upper_bound = temp_mean + 3 * temp_std
-            
-            # Separate valid data and outliers
-            valid_df = original_commune_df[(original_commune_df['valtraduite'] >= lower_bound) & 
-                                            (original_commune_df['valtraduite'] <= upper_bound)]
-            outliers_df = original_commune_df[(original_commune_df['valtraduite'] < lower_bound) | 
-                                            (original_commune_df['valtraduite'] > upper_bound)]
-            
-            # Compute mean and std on the valid data
-            valid_mean = valid_df['valtraduite'].mean()
-            valid_std = valid_df['valtraduite'].std()
-            
-            # Compute centered reduced data points and add a new column 'centered'
-            valid_df = valid_df.copy()
-            valid_df['centered'] = (valid_df['valtraduite'] - valid_mean) / valid_std
-            center_records.append(valid_df)
-
-        # Combine all centered data from each commune into one dataframe
-        if not center_records:
+        result = center_data_per_commune(filtered_df, parametre_info=parametre_info)
+        if result is None:
+            print(f"No valid data found for {parametre_info['LbCourtParametre']}. Skipping.")
             continue
-        center_df = pd.concat(center_records, ignore_index=True)
-        center_df['dateprel'] = pd.to_datetime(center_df['dateprel'])
-        center_df.sort_values('dateprel', inplace=True)
+        center_df, valid_records, outliers_records = result
+
+        valid_mean = center_df['valtraduite'].mean()
+        valid_std = center_df['valtraduite'].std()
 
         # Set the date column as the index to use a time-based rolling window (3 months ≈ 90 days)
         center_df.set_index('dateprel', inplace=True)
         center_df['centered_smoothed'] = center_df['centered'].rolling('60D', center=True).mean()
+        center_df['valtraduite_smoothed'] = center_df['valtraduite'].rolling('60D', center=True).mean()
         center_df.reset_index(inplace=True)
+        #break
+        plot_time_series(center_df, 'valtraduite', mean=valid_mean, std=valid_std, parametre_info=parametre_info, nom_plot='measurement', save=True)
+        plot_time_series(center_df, 'valtraduite_smoothed', mean=valid_mean, std=valid_std, parametre_info=parametre_info, nom_plot='smoothed', save=True)
+        plot_time_series(center_df, 'centered_smoothed', parametre_info=parametre_info, nom_plot='centered_smoothed', save=True)
+        plot_monthly_average(center_df, 'centered_smoothed', parametre_info=parametre_info, save=True)
         
-        plot_time_series(center_df, 'centered_smoothed', parametre_info=parametre_info, nom_plot='centered_smoothed')
-        plot_monthly_average(center_df, 'centered_smoothed', parametre_info=parametre_info)
-
 # --- Main Execution ---
 
 if __name__ == '__main__':
@@ -239,5 +276,5 @@ if __name__ == '__main__':
     if df.empty:
         print("Filtered DataFrame is empty. Cannot proceed.")
         exit(1)
-    map_all_parametre(df.copy())
+    #map_all_parametre(df.copy())
     analyze_and_plot(df.copy())
