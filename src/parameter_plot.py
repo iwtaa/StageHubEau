@@ -230,11 +230,10 @@ def center_data_per_commune(df, parametre_info):
 
     # Combine all centered data from each commune into one dataframe
     if not center_records:
-        return None
+        return None, None, None
     center_df = pd.concat(center_records, ignore_index=True)
     center_df['dateprel'] = pd.to_datetime(center_df['dateprel'])
     center_df.sort_values('dateprel', inplace=True)
-
     return center_df, valid_records, outliers_records
 
 def analyze_and_plot(df):
