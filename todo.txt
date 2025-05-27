@@ -1,4 +1,4 @@
-(A) Contacter prof pour la @conventionstage t:2025-05-16
+x 2025-05-27 2025-05-27 Contacter prof pour la @conventionstage t:2025-05-16 pri:A
 x 2025-05-16 2025-05-16 @explorer et lister toutes les +api pri:B
 (C) Faire le model du +rapport de stage
 x 2025-05-15 2025-05-15 Faire la @conventionstage . Verifier dates, nums, et rediger sujet et intitule  t:2025-05-19 pri:A
@@ -9,5 +9,11 @@ x 2025-05-19 2025-05-19 Coder une fonction qui retourne la @potabilite officiell
 x 2025-05-19 2025-05-19 Lister tout les parametres sur la @potabilite pour les afficher sur une +carte pri:B
 x 2025-05-22 2025-05-22 @explorer toutes les mesures de substances sur la +carte  pri:B
 (B) @explorer des correlations entre les mesures
-(B) @explorer les periodes pour la @potabilite
-(B) Download and use raw full database instead of +api
+x 2025-05-27 2025-05-27 @explorer les periodes pour la @potabilite pri:B
+x 2025-05-27 2025-05-27 Download and use raw full database instead of +api pri:B
+(B) Map la variance par communes
+(B) Map la regression lineaire par communes
+(B) Faire regression lineaire
+(B) De-saisonaliser les donnees
+(B) Faire auto-correlation pour detecter les periodes, et en retenir une valeur
+(B) Faire matrice correlation apres pre-processing
