@@ -8,12 +8,12 @@ x 2025-05-16 2025-05-16 @explorer les conditions legale d'une eau potable pri:B
 x 2025-05-19 2025-05-19 Coder une fonction qui retourne la @potabilite officielle, sur les resultats de l' +api  pri:B
 x 2025-05-19 2025-05-19 Lister tout les parametres sur la @potabilite pour les afficher sur une +carte pri:B
 x 2025-05-22 2025-05-22 @explorer toutes les mesures de substances sur la +carte  pri:B
-(B) @explorer des correlations entre les mesures
+x 2025-05-28 2025-05-28 @explorer des correlations entre les mesures pri:B
 x 2025-05-27 2025-05-27 @explorer les periodes pour la @potabilite pri:B
 x 2025-05-27 2025-05-27 Download and use raw full database instead of +api pri:B
 x 2025-05-28 2025-05-28 Map la variance par communes pri:B
 (B) Map la regression lineaire par communes
 x 2025-05-28 2025-05-28 Faire regression lineaire pri:B
-(B) De-saisonaliser les donnees
-(B) Faire auto-correlation pour detecter les periodes, et en retenir une valeur
-(B) Faire matrice correlation apres pre-processing
+x 2025-05-28 2025-05-28 De-saisonaliser les donnees pri:B
+x 2025-05-28 2025-05-28 Faire auto-correlation pour detecter les periodes, et en retenir une valeur pri:B
+x 2025-05-28 2025-05-28 Faire matrice correlation apres pre-processing pri:B
