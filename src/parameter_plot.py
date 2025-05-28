@@ -7,6 +7,7 @@ import geopandas as gpd
 import time
 from tqdm import tqdm
 import numpy as np
+from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 
 GEO_API_URL = 'https://geo.api.gouv.fr/departements/{}/communes?format=geojson&geometry=contour'
@@ -70,7 +71,7 @@ def fetch_geodata(departement_code=None):
             return None
     return None
 
-def map(df, departement, gdf=None, cdparametre=None, debug=False):
+def map(df, departement, col='valtraduite', gdf=None, cdparametre=None, save=False, debug=False):
     if cdparametre is not None:
         df = df[df['cdparametre'] == cdparametre]
     df = df[df['cddept'] == departement]
@@ -83,17 +84,19 @@ def map(df, departement, gdf=None, cdparametre=None, debug=False):
         print("Failed to fetch geodata. Exiting.")
         return
     
-    df_average = df.groupby('inseecommuneprinc')['valtraduite'].mean().reset_index(name='average_valtraduite')
-    df_min = df_average['average_valtraduite'].min()
-    df_max = df_average['average_valtraduite'].max()
+    # Group by 'inseecommuneprinc' and calculate the mean of the specified column
+    df_grouped = df.groupby('inseecommuneprinc')[col].mean().reset_index()
     
-    merged = gdf.merge(df_average, on='inseecommuneprinc', how='left')
+    df_min = df_grouped[col].min()
+    df_max = df_grouped[col].max()
+    
+    merged = gdf.merge(df_grouped, on='inseecommuneprinc', how='left')
     
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
     
     # Use a separate object for the plot to configure the colorbar
     plot = merged.plot(
-        column='average_valtraduite',
+        column=col,
         cmap='viridis',
         linewidth=0.8,
         ax=ax,
@@ -109,9 +112,12 @@ def map(df, departement, gdf=None, cdparametre=None, debug=False):
     ax.set_xlabel('Longitude')
     ax.set_ylabel('Latitude')
 
-    path = os.path.join(PLOTS_DIR, f'{df['LbCourtParametre'].iloc[0]}')
-    os.makedirs(path, exist_ok=True)  # Ensure the directory exists
-    plt.savefig(f'{path}/map.png')
+    if save:
+        path = os.path.join(PLOTS_DIR, f'{df['LbCourtParametre'].iloc[0]}')
+        os.makedirs(path, exist_ok=True)  # Ensure the directory exists
+        plt.savefig(f'{path}/map.png')
+    else:
+        plt.show()
     plt.close()
 
 def plot_yearly_monthly_average(df, year_col='valtraduite', month_col='centered_reduced_val', save=False):
@@ -176,43 +182,69 @@ def plot_yearly_monthly_average(df, year_col='valtraduite', month_col='centered_
         plt.show()
     plt.close()
 
-    def cross_correlation(series1, series2, max_lag, debug=False):
-        """
-        Calculates the cross-correlation between two time series with increasing lag.
+def cross_correlation(series1, series2, max_lag, debug=False):
+    """
+    Calculates the cross-correlation between two time series with increasing lag.
 
-        Args:
-            series1 (pd.Series): The first time series.
-            series2 (pd.Series): The second time series.
-            max_lag (int): The maximum lag to consider.
+    Args:
+        series1 (pd.Series): The first time series.
+        series2 (pd.Series): The second time series.
+        max_lag (int): The maximum lag to consider.
 
-        Returns:
-            pd.DataFrame: A DataFrame containing the lag and correlation values.
-        """
-        if debug:
-            print(f"Calculating cross-correlation with max_lag={max_lag}")
-        correlations = []
-        lags = range(-max_lag, max_lag + 1)
-        for lag in lags:
-            if lag < 0:
-                shifted_series1 = series1[-lag:]
-                shifted_series2 = series2[:lag]
-            elif lag > 0:
-                shifted_series1 = series1[:-lag]
-                shifted_series2 = series2[lag:]
-            else:
-                shifted_series1 = series1
-                shifted_series2 = series2
-            
-            min_length = min(len(shifted_series1), len(shifted_series2))
-            
-            if min_length == 0:
-                corr = np.nan
-            else:
-                corr = np.corrcoef(shifted_series1[-min_length:], shifted_series2[-min_length:])[0, 1]
-            
-            correlations.append(corr)
+    Returns:
+        pd.DataFrame: A DataFrame containing the lag and correlation values.
+    """
+    if debug:
+        print(f"Calculating cross-correlation with max_lag={max_lag}")
+    correlations = []
+    lags = range(-max_lag, max_lag + 1)
+    for lag in lags:
+        if lag < 0:
+            shifted_series1 = series1[-lag:]
+            shifted_series2 = series2[:lag]
+        elif lag > 0:
+            shifted_series1 = series1[:-lag]
+            shifted_series2 = series2[lag:]
+        else:
+            shifted_series1 = series1
+            shifted_series2 = series2
         
-        return pd.DataFrame({'lag': lags, 'correlation': correlations})
+        min_length = min(len(shifted_series1), len(shifted_series2))
+        
+        if min_length == 0:
+            corr = np.nan
+        else:
+            corr = np.corrcoef(shifted_series1[-min_length:], shifted_series2[-min_length:])[0, 1]
+        
+        correlations.append(corr)
+    
+    return pd.DataFrame({'lag': lags, 'correlation': correlations})
+
+def linear_regression(df, time_col, value_col):
+    """
+    Performs linear regression on a time series.
+
+    Args:
+        df (pd.DataFrame): The DataFrame containing the time series.
+        time_col (str): The name of the column containing the time variable.
+        value_col (str): The name of the column containing the value variable.
+
+    Returns:
+        tuple: A tuple containing the slope and intercept of the regression line.
+    """
+    # Convert time column to numerical representation (e.g., days since start)
+    time = (df[time_col] - df[time_col].min()).dt.days.values.reshape(-1, 1)
+    values = df[value_col].values
+
+    # Create and fit the linear regression model
+    model = LinearRegression()
+    model.fit(time, values)
+
+    # Extract the slope and intercept
+    slope = model.coef_[0]
+    intercept = model.intercept_
+
+    return slope, intercept
 
 def plot_time_series(df, col='valtraduite', save=False, debug=False):
     if debug:
@@ -222,34 +254,48 @@ def plot_time_series(df, col='valtraduite', save=False, debug=False):
     if debug:
         print(f"Mean: {mean}, Std: {std}")
     df = df.sort_values(by='dateprel')
-    ax = df.plot(x='dateprel', y=col, figsize=(12, 6), title=f'Time Series of {col}')
+    
+    # Perform linear regression
+    slope, intercept = linear_regression(df, 'dateprel', col)
+    
+    # Generate regression line values
+    df['time_num'] = (df['dateprel'] - df['dateprel'].min()).dt.days
+    df['regression_line'] = slope * df['time_num'] + intercept
+
+    # Plotting
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(df['dateprel'], df[col], label=col)
+    ax.plot(df['dateprel'], df['regression_line'], color='red', linestyle='--', label=f'Regression Line (Slope={slope:.4f})')
+
     ax.set_xlabel('Date')
     ax.set_ylabel(col)
     ax.grid()
     ax.xaxis.set_major_locator(plt.matplotlib.dates.YearLocator())
     ax.xaxis.set_major_formatter(plt.matplotlib.dates.DateFormatter('%Y'))
     plt.tight_layout()
-    plt.axhline(mean, color='r', linestyle='--', label=f'Mean = {mean:.2f}')
-    plt.axhline(mean + std, color='g', linestyle='--', label=f'Mean + Std = {mean + std:.2f}')
-    plt.axhline(mean - std, color='g', linestyle='--', label=f'Mean - Std = {mean - std:.2f}')
-    plt.legend()
+    ax.axhline(mean, color='r', linestyle='--', label=f'Mean = {mean:.2f}')
+    ax.axhline(mean + std, color='g', linestyle='--', label=f'Mean + Std = {mean + std:.2f}')
+    ax.axhline(mean - std, color='g', linestyle='--', label=f'Mean - Std = {mean - std:.2f}')
+    ax.legend()
+    
     if save:
-        if debug:
-            print(f"Saving plot to {path}")
         path = os.path.join(PLOTS_DIR, f'{df['LbCourtParametre'].iloc[0]}')
         os.makedirs(path, exist_ok=True)  # Ensure the directory exists
         plt.savefig(f'{path}/centered_reduced.png')
         plt.close()
     else:
-        if debug:
-            print("Showing plot")
         plt.show()
     plt.close()
 
 def smooth(df, window_size=60, col='centered_reduced_val'):
-    df = df.set_index('dateprel').sort_index()
-    df[col] = df[col].rolling(f'{window_size}D', center=True).mean()
-    return df.reset_index()
+    if 'dateprel' not in df.columns:
+        print("Error: 'dateprel' column is missing in the DataFrame.")
+        return df
+    df = df.sort_values(by='dateprel')  # Sort by date before setting index
+    df = df.set_index('dateprel')
+    df[f'{col}_smooth'] = df[col].rolling(f'{window_size}D', center=True, min_periods=1).mean()
+    df = df.reset_index()
+    return df
 
 def remove_outliers(df, col='valtraduite'):
     mean = df[col].mean()
@@ -259,21 +305,32 @@ def remove_outliers(df, col='valtraduite'):
     return df[(df[col] >= lower_bound) & (df[col] <= upper_bound)]
 
 def center_reduce(df):
-    def process_commune(commune_df):
-        if len(commune_df) < 50:
+    df['centered_reduced_val'] = np.nan
+
+    def process_commune(valtraduite):
+        if len(valtraduite) < 50:
             return None
-        filtered_df = remove_outliers(commune_df, col='valtraduite')
-        mean = filtered_df['valtraduite'].mean()
-        std = filtered_df['valtraduite'].std()
-        centered_reduced_df = filtered_df.copy()
-        centered_reduced_df['centered_reduced_val'] = (centered_reduced_df['valtraduite'] - mean) / std
-        return centered_reduced_df
+        
+        mean = valtraduite.mean()
+        std = valtraduite.std()
+        
+        mask = (valtraduite >= mean - 2 * std) & (valtraduite <= mean + 2 * std)
+        filtered_valtraduite = valtraduite[mask]
+        
+        if filtered_valtraduite.empty:
+            return None
+        
+        centered_reduced_val = (filtered_valtraduite - mean) / std
+        return centered_reduced_val.index, centered_reduced_val.values
 
-    communes = df['inseecommuneprinc'].unique()
-    centered_reduced_dfs = [process_commune(df[df['inseecommuneprinc'] == commune]) for commune in communes]
-    centered_reduced_dfs = [df for df in centered_reduced_dfs if df is not None]
+    grouped = df.groupby('inseecommuneprinc')['valtraduite']
 
-    if not centered_reduced_dfs:
-        return pd.DataFrame()
+    for commune, valtraduite in grouped:
+        result = process_commune(valtraduite)
+        if result is not None:
+            indices, values = result
+            df.loc[indices, 'centered_reduced_val'] = values
     
-    return pd.concat(centered_reduced_dfs, ignore_index=True)
+    df = df.dropna(subset=['centered_reduced_val'])
+
+    return df
