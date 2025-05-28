@@ -11,9 +11,9 @@ x 2025-05-22 2025-05-22 @explorer toutes les mesures de substances sur la +carte
 (B) @explorer des correlations entre les mesures
 x 2025-05-27 2025-05-27 @explorer les periodes pour la @potabilite pri:B
 x 2025-05-27 2025-05-27 Download and use raw full database instead of +api pri:B
-(B) Map la variance par communes
+x 2025-05-28 2025-05-28 Map la variance par communes pri:B
 (B) Map la regression lineaire par communes
-(B) Faire regression lineaire
+x 2025-05-28 2025-05-28 Faire regression lineaire pri:B
 (B) De-saisonaliser les donnees
 (B) Faire auto-correlation pour detecter les periodes, et en retenir une valeur
 (B) Faire matrice correlation apres pre-processing
