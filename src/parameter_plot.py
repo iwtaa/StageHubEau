@@ -1,5 +1,3 @@
-#PLOT ANALYZE 2
-
 import pandas as pd
 import os
 import requests
@@ -17,27 +15,16 @@ DEPARTEMENT_CODE = '17'
 DATA_DIR = 'data'
 PLOTS_DIR = 'plots'
 
-def load_data_list(file_path='data/products/file_row_counts.csv', debug=False):
-    if debug:
-        print(f"Load and prepare data from {file_path}")
+def load_data_list(file_path='data/products/file_row_counts.csv'):
     df = pd.read_csv(file_path)
-    if debug:
-        print("First 5 rows of the DataFrame:")
-        print(df.head())
-        print("\nNumber of rows in the original DataFrame:", len(df))
     df = df[(df['mean'] != 0.0) & (df['zero_percentage'] < 80.0) & (df['rows'] > 10000) & (df['unique_val'] > 10)]
-    if debug:
-        print("Number of rows in the filtered DataFrame:", len(df))
     return df['file_name'].to_list()
 
-def load_and_prepare_data(file_name, debug=False):
+def load_and_prepare_data(file_name):
     df = pd.read_csv(file_name)
     df['dateprel'] = pd.to_datetime(df['dateprel'])
-    #cddept,inseecommuneprinc,nomcommuneprinc,dateprel,heureprel,cdparametre,cdunitereferencesiseeaux,limitequal,valtraduite,NomParametre,LbCourtParametre
-    #str, str, str, datetime64[ns], str, str, str, str, float, str, str
     df['inseecommuneprinc'] = df['inseecommuneprinc'].astype(str)
-    df['valtraduite'] = pd.to_numeric(df['valtraduite'], errors='coerce')
-    df = df.dropna(subset=['valtraduite'])
+    df['valtraduite'] = pd.to_numeric(df['valtraduite'], errors='coerce').dropna()
     df['cdparametre'] = df['cdparametre'].astype(str)
     df['cdunitereferencesiseeaux'] = df['cdunitereferencesiseeaux'].astype(str)
     df['cddept'] = df['cddept'].astype(str)
@@ -47,12 +34,11 @@ def load_and_prepare_data(file_name, debug=False):
 def fetch_geodata(departement_code=None):
     if departement_code is None:
         return None
-    """Fetches GeoJSON data for a given departement code with retry logic."""
     url = GEO_API_URL.format(departement_code)
     for attempt in range(MAX_RETRIES):
         try:
             response = requests.get(url)
-            response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+            response.raise_for_status()
             data = response.json()
             gdf = gpd.GeoDataFrame.from_features(data['features'])
             gdf.rename(columns={'code': 'inseecommuneprinc'}, inplace=True)
@@ -61,8 +47,7 @@ def fetch_geodata(departement_code=None):
         except requests.exceptions.RequestException as e:
             print(f"Attempt {attempt + 1} failed: {e}")
             if attempt < MAX_RETRIES - 1:
-                delay = BACKOFF_FACTOR ** attempt
-                time.sleep(delay)
+                time.sleep(BACKOFF_FACTOR ** attempt)
             else:
                 print("Max retries reached. Failed to fetch geodata.")
                 return None
@@ -71,11 +56,11 @@ def fetch_geodata(departement_code=None):
             return None
     return None
 
-def map(df, departement, col='valtraduite', gdf=None, cdparametre=None, save=False, debug=False):
+def map(df, departement, col='valtraduite', gdf=None, cdparametre=None, save=False):
     if cdparametre is not None:
         df = df[df['cdparametre'] == cdparametre]
     df = df[df['cddept'] == departement]
-    if len(df) == 0:
+    if df.empty:
         print(f"No data available for departement {departement} and parameter {cdparametre}. Exiting.")
         return
     if gdf is None:
@@ -84,18 +69,13 @@ def map(df, departement, col='valtraduite', gdf=None, cdparametre=None, save=Fal
         print("Failed to fetch geodata. Exiting.")
         return
     
-    # Group by 'inseecommuneprinc' and calculate the mean of the specified column
     df_grouped = df.groupby('inseecommuneprinc')[col].mean().reset_index()
-    
     df_min = df_grouped[col].min()
     df_max = df_grouped[col].max()
-    
     merged = gdf.merge(df_grouped, on='inseecommuneprinc', how='left')
     
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-    
-    # Use a separate object for the plot to configure the colorbar
-    plot = merged.plot(
+    merged.plot(
         column=col,
         cmap='viridis',
         linewidth=0.8,
@@ -104,168 +84,95 @@ def map(df, departement, col='valtraduite', gdf=None, cdparametre=None, save=Fal
         legend=True,
         legend_kwds={'label': f"Value ({df['cdunitereferencesiseeaux'].iloc[0]})", 'orientation': "horizontal"},
         missing_kwds={"color": "lightgrey", "edgecolor": "0.8", "label": "Missing values"},
-        vmin=df_min,  # Set the minimum value for the color scale
-        vmax=df_max   # Set the maximum value for the color scale
+        vmin=df_min,
+        vmax=df_max
     )
     
-    ax.set_title(f"{df['LbCourtParametre'].iloc[0]}", fontsize=15)
+    ax.set_title(f"{col} of {df['LbCourtParametre'].iloc[0]}", fontsize=15)
     ax.set_xlabel('Longitude')
     ax.set_ylabel('Latitude')
 
     if save:
         path = os.path.join(PLOTS_DIR, f'{df['LbCourtParametre'].iloc[0]}')
-        os.makedirs(path, exist_ok=True)  # Ensure the directory exists
-        plt.savefig(f'{path}/map.png')
+        os.makedirs(path, exist_ok=True)
+        plt.savefig(f'{path}/map_{col}.png')
     else:
         plt.show()
     plt.close()
 
 def plot_yearly_monthly_average(df, year_col='valtraduite', month_col='centered_reduced_val', save=False):
-    # Ensure 'dateprel' is datetime
     df['dateprel'] = pd.to_datetime(df['dateprel'])
-
-    # Extract year and month
     df['year'] = df['dateprel'].dt.year
     df['month'] = df['dateprel'].dt.month
 
-    # Calculate the yearly and monthly averages
     yearly_averages = df.groupby('year')[year_col].mean()
     monthly_averages = df.groupby('month')[month_col].mean()
 
-    # Calculate additional information
     total_entries = len(df)
-    #avg_monthly_entries = df.groupby('month').size().mean()
-    #avg_yearly_entries = df.groupby('year').size().mean()
     monthly_entries = df.groupby('month').size()
     yearly_entries = df.groupby('year').size()
 
-    # Create subplots
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 12))
 
-    # Plot yearly averages as a line plot
     years_range = range(2019, 2025)
     ax1.plot(yearly_averages.index, yearly_averages.values, marker='o', linestyle='-', color='blue')
-    ax1.set_title(f'Yearly Averages of {df["LbCourtParametre"].iloc[0]} \n'
-                  f'Total Entries: {total_entries}')
+    ax1.set_title(f'Yearly Averages of {df["LbCourtParametre"].iloc[0]} \nTotal Entries: {total_entries}')
     ax1.set_ylabel(f'Average Value ({df["cdunitereferencesiseeaux"].iloc[0]})')
     ax1.set_xlabel('Year')
     ax1.grid(axis='y', linestyle='--')
     ax1.set_xticks(years_range)
     ax1.tick_params(axis='x', rotation=0)
     ax1.set_xlim(min(years_range), max(years_range))
-    # Annotate each year with the number of entries
     for year, count in yearly_entries.items():
         ax1.annotate(f'Entries: {count}', xy=(year, yearly_averages[year]), xytext=(0, 5), textcoords='offset points', ha='center', fontsize=8)
 
-    # Plot monthly averages as a bar plot
-    colors = ['green' if x >= 0 else 'red' for x in monthly_averages]  # Green for positive, red for negative
+    colors = ['green' if x >= 0 else 'red' for x in monthly_averages]
     ax2.bar(monthly_averages.index, monthly_averages.values, color=colors)
-    ax2.set_title(f'Monthly Averages of {df["LbCourtParametre"].iloc[0]}\n'
-                  f'Total Entries: {total_entries}')
+    ax2.set_title(f'Monthly Averages of {df["LbCourtParametre"].iloc[0]}\nTotal Entries: {total_entries}')
     ax2.set_ylabel('Average Centered Reduced Value (No Unit)')
     ax2.set_xlabel('Month')
     ax2.set_xticks(monthly_averages.index)
     ax2.tick_params(axis='x', rotation=0)
     ax2.grid(axis='y', linestyle='--')
-    # Annotate each month with the number of entries
     for month, count in monthly_entries.items():
         ax2.annotate(f'Entries: {count}', xy=(month, monthly_averages[month]), xytext=(0, 5), textcoords='offset points', ha='center', fontsize=8)
 
-    plt.tight_layout()  # Adjust layout to prevent labels from overlapping
+    plt.tight_layout()
 
-    # Save the plot
     if save:
         path = os.path.join(PLOTS_DIR, f'{df["LbCourtParametre"].iloc[0]}')
-        os.makedirs(path, exist_ok=True)  # Ensure the directory exists
+        os.makedirs(path, exist_ok=True)
         plt.savefig(f'{path}/Yearly_Monthly_Averages.png')
     else:
         plt.show()
     plt.close()
 
-def cross_correlation(series1, series2, max_lag, debug=False):
-    """
-    Calculates the cross-correlation between two time series with increasing lag.
-
-    Args:
-        series1 (pd.Series): The first time series.
-        series2 (pd.Series): The second time series.
-        max_lag (int): The maximum lag to consider.
-
-    Returns:
-        pd.DataFrame: A DataFrame containing the lag and correlation values.
-    """
-    if debug:
-        print(f"Calculating cross-correlation with max_lag={max_lag}")
-    correlations = []
-    lags = range(-max_lag, max_lag + 1)
-    for lag in lags:
-        if lag < 0:
-            shifted_series1 = series1[-lag:]
-            shifted_series2 = series2[:lag]
-        elif lag > 0:
-            shifted_series1 = series1[:-lag]
-            shifted_series2 = series2[lag:]
-        else:
-            shifted_series1 = series1
-            shifted_series2 = series2
-        
-        min_length = min(len(shifted_series1), len(shifted_series2))
-        
-        if min_length == 0:
-            corr = np.nan
-        else:
-            corr = np.corrcoef(shifted_series1[-min_length:], shifted_series2[-min_length:])[0, 1]
-        
-        correlations.append(corr)
-    
-    return pd.DataFrame({'lag': lags, 'correlation': correlations})
-
 def linear_regression(df, time_col, value_col):
-    """
-    Performs linear regression on a time series.
-
-    Args:
-        df (pd.DataFrame): The DataFrame containing the time series.
-        time_col (str): The name of the column containing the time variable.
-        value_col (str): The name of the column containing the value variable.
-
-    Returns:
-        tuple: A tuple containing the slope and intercept of the regression line.
-    """
-    # Convert time column to numerical representation (e.g., days since start)
     time = (df[time_col] - df[time_col].min()).dt.days.values.reshape(-1, 1)
     values = df[value_col].values
 
-    # Create and fit the linear regression model
     model = LinearRegression()
     model.fit(time, values)
 
-    # Extract the slope and intercept
     slope = model.coef_[0]
     intercept = model.intercept_
 
     return slope, intercept
 
-def plot_time_series(df, col='valtraduite', save=False, debug=False):
-    if debug:
-        print(f"Plotting time series for {col}")
+def plot_time_series(df, col='valtraduite', save=False):
     mean = df[col].mean()
     std = df[col].std()
-    if debug:
-        print(f"Mean: {mean}, Std: {std}")
     df = df.sort_values(by='dateprel')
     
-    # Perform linear regression
     slope, intercept = linear_regression(df, 'dateprel', col)
     
-    # Generate regression line values
     df['time_num'] = (df['dateprel'] - df['dateprel'].min()).dt.days
     df['regression_line'] = slope * df['time_num'] + intercept
 
-    # Plotting
     fig, ax = plt.subplots(figsize=(12, 6))
     ax.plot(df['dateprel'], df[col], label=col)
-    ax.plot(df['dateprel'], df['regression_line'], color='red', linestyle='--', label=f'Regression Line (Slope={slope:.4f})')
+    yearly_slope = slope * 365.25
+    ax.plot(df['dateprel'], df['regression_line'], color='purple', linestyle='solid', label=f'Regression Line (Yearly Slope={yearly_slope:.4f})')
 
     ax.set_xlabel('Date')
     ax.set_ylabel(col)
@@ -273,16 +180,15 @@ def plot_time_series(df, col='valtraduite', save=False, debug=False):
     ax.xaxis.set_major_locator(plt.matplotlib.dates.YearLocator())
     ax.xaxis.set_major_formatter(plt.matplotlib.dates.DateFormatter('%Y'))
     plt.tight_layout()
-    ax.axhline(mean, color='r', linestyle='--', label=f'Mean = {mean:.2f}')
-    ax.axhline(mean + std, color='g', linestyle='--', label=f'Mean + Std = {mean + std:.2f}')
-    ax.axhline(mean - std, color='g', linestyle='--', label=f'Mean - Std = {mean - std:.2f}')
+    ax.axhline(mean, color='r', linestyle='-.', label=f'Mean = {mean:.2f}')
+    ax.axhline(mean + std, color='g', linestyle='dotted', label=f'Mean + Std = {mean + std:.2f}')
+    ax.axhline(mean - std, color='g', linestyle='dotted', label=f'Mean - Std = {mean - std:.2f}')
     ax.legend()
     
     if save:
         path = os.path.join(PLOTS_DIR, f'{df['LbCourtParametre'].iloc[0]}')
-        os.makedirs(path, exist_ok=True)  # Ensure the directory exists
+        os.makedirs(path, exist_ok=True)
         plt.savefig(f'{path}/centered_reduced.png')
-        plt.close()
     else:
         plt.show()
     plt.close()
@@ -291,8 +197,7 @@ def smooth(df, window_size=60, col='centered_reduced_val'):
     if 'dateprel' not in df.columns:
         print("Error: 'dateprel' column is missing in the DataFrame.")
         return df
-    df = df.sort_values(by='dateprel')  # Sort by date before setting index
-    df = df.set_index('dateprel')
+    df = df.sort_values(by='dateprel').set_index('dateprel')
     df[f'{col}_smooth'] = df[col].rolling(f'{window_size}D', center=True, min_periods=1).mean()
     df = df.reset_index()
     return df
@@ -334,3 +239,143 @@ def center_reduce(df):
     df = df.dropna(subset=['centered_reduced_val'])
 
     return df
+
+def calculate_and_plot_fft(pdf, column='deregionalized_valtraduite_smooth', save=False):
+    if column not in pdf.columns:
+        return None
+
+    pdf = pdf.sort_values(by='dateprel').set_index('dateprel')
+    daily_avg = pdf[column].resample('D').mean().interpolate(method='linear')
+    if daily_avg.isnull().all():
+        return None
+
+    daily_avg_no_nan = daily_avg.dropna()
+    fft = np.fft.fft(daily_avg_no_nan.values)
+    frequencies = np.fft.fftfreq(len(daily_avg_no_nan))
+    abs_fft = np.abs(fft)
+    max_index = min(len(abs_fft) // 2, int(len(daily_avg_no_nan) / 100))
+    dominant_frequency_index = np.argmax(abs_fft[1:max_index]) + 1
+    dominant_frequency = frequencies[dominant_frequency_index]
+    period = 1 / abs(dominant_frequency) if dominant_frequency != 0 else np.nan
+    magnitude_threshold = 0.8
+    peaks_above_threshold = np.where(abs_fft[1:max_index] > (abs_fft[dominant_frequency_index] * magnitude_threshold))[0] + 1
+    if len(peaks_above_threshold) > 1:
+        period = None
+
+    positive_frequencies = frequencies[1:len(abs_fft)//2]
+    periods = 1 / np.abs(positive_frequencies)
+    magnitude_threshold = np.mean(abs_fft[1:len(abs_fft)//2]) * 2
+    
+    plt.figure(figsize=(12, 6))
+    if period is None or np.isnan(period) or period > 365 * 2 or abs_fft[dominant_frequency_index] < magnitude_threshold:
+        plt.plot(periods, abs_fft[1:len(abs_fft)//2], label='No significant frequency found')
+    else:
+        plt.plot(periods, abs_fft[1:len(abs_fft)//2], label=f'Dominant Period: {period:.2f} days')
+    
+    plt.xlabel('Period (days)')
+    plt.ylabel('Magnitude')
+    plt.title(f'FFT Spectrum of {pdf["LbCourtParametre"].iloc[0]}')
+    plt.grid(True, which='major', axis='x', linewidth=0.7, color='gray')
+    plt.xticks(np.arange(0, 365 * 2, 365/4), [f'{x:.0f}' for x in np.arange(0, 365 * 2, 365/4)])
+    plt.xlim(0, 365 * 2)
+    plt.legend()
+    plt.tight_layout()
+    
+    if save:
+        path = os.path.join(PLOTS_DIR, f'{pdf["LbCourtParametre"].iloc[0]}')
+        os.makedirs(path, exist_ok=True)
+        plt.savefig(f'{path}/fft_spectrum.png')
+    else:
+        plt.show()
+    plt.close()
+
+    return period
+
+def deperiodize_timeseries(pdf, save=False):
+    column = 'deregionalized_valtraduite_smooth'
+    if column not in pdf.columns:
+        return None
+
+    pdf = pdf.sort_values(by='dateprel').set_index('dateprel')
+    daily_avg = pdf[column].resample('D').mean().interpolate(method='linear')
+    if daily_avg.isnull().all():
+        return None
+
+    daily_avg_no_nan = daily_avg.dropna()
+    fft = np.fft.fft(daily_avg_no_nan.values)
+    abs_fft = np.abs(fft)
+    dominant_frequency_index = np.argmax(abs_fft[1:len(abs_fft)//2]) + 1
+    fft_filtered = fft.copy()
+    num_harmonics = 20
+
+    for i in range(1, num_harmonics + 1):
+        harmonic_index = dominant_frequency_index * i
+        if harmonic_index < len(fft_filtered) // 2:
+            fft_filtered[harmonic_index] = (fft_filtered[harmonic_index - 1] + fft_filtered[harmonic_index + 1]) / 2
+            fft_filtered[-harmonic_index] = (fft_filtered[-harmonic_index - 1] + fft_filtered[-harmonic_index + 1]) / 2
+
+    ifft = np.fft.ifft(fft_filtered)
+
+    slope, intercept = linear_regression(pd.DataFrame({'dateprel': daily_avg_no_nan.index, 'valtraduite': ifft.real}).set_index('dateprel').reset_index(), 'dateprel', 'valtraduite')
+    mean = ifft.real.mean()
+    std = ifft.real.std()
+    
+    time_num = (daily_avg_no_nan.index - daily_avg_no_nan.index.min()).days
+    regression_line = slope * time_num + intercept
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(daily_avg_no_nan.index, ifft.real, label='Deperiodized Time Series')
+    yearly_slope = slope * 365.25
+    ax.plot(daily_avg_no_nan.index, regression_line, color='purple', linestyle='solid', label=f'Regression Line (Yearly Slope={yearly_slope:.4f})')
+
+    ax.set_xlabel('Date')
+    ax.set_ylabel(f'Value ({pdf["cdunitereferencesiseeaux"].iloc[0]})')
+    ax.grid()
+    ax.xaxis.set_major_locator(plt.matplotlib.dates.YearLocator())
+    ax.xaxis.set_major_formatter(plt.matplotlib.dates.DateFormatter('%Y'))
+    plt.tight_layout()
+    ax.axhline(mean, color='r', linestyle='-.', label=f'Mean = {mean:.2f}')
+    ax.axhline(mean + std, color='g', linestyle='dotted', label=f'Mean + Std = {mean + std:.2f}')
+    ax.axhline(mean - std, color='g', linestyle='dotted', label=f'Mean - Std = {mean - std:.2f}')
+    ax.legend()
+    ax.set_title(f'Deseasoned Time Series of {pdf["LbCourtParametre"].iloc[0]}')
+    
+    if save:
+        path = os.path.join(PLOTS_DIR, f'{pdf["LbCourtParametre"].iloc[0]}')
+        os.makedirs(path, exist_ok=True)
+        plt.savefig(f'{path}/deseasoned_time_series.png')
+    else:
+        plt.show()
+    plt.close()
+
+    return pd.Series(ifft.real, index=daily_avg_no_nan.index)
+
+def cross_correlation(series_a: pd.Series,
+                      series_b: pd.Series,
+                      max_lag: int = 30) -> pd.Series:
+    """
+    Calcule la corrélation croisée entre deux séries temporelles
+    pour des lags de -max_lag à +max_lag.
+    Retourne une Series dont l’index sont les lags et les valeurs
+    les coefficients de corrélation.
+    """
+    # on aligne les deux séries sur l’intersection des dates
+    df = pd.concat([series_a, series_b], axis=1).dropna()
+    if df.empty:
+        return np.nan, np.nan, np.nan
+    a, b = df.iloc[:,0], df.iloc[:,1]
+    lags = range(-max_lag, max_lag+1)
+    corrs = []
+    for lag in lags:
+        if lag < 0:
+            corr = a.shift(-lag).corr(b)
+        else:
+            corr = a.corr(b.shift(lag))
+        corrs.append(corr)
+    
+    cross_corr = pd.Series(corrs, index=lags)
+    abs_cross_corr = abs(cross_corr).fillna(0)
+    peak_value = abs_cross_corr.max()
+    peak_lag = abs_cross_corr.idxmax()
+    peak_sign = cross_corr.fillna(0)[peak_lag] >= 0 if not np.isnan(peak_lag) else np.nan
+    return peak_value, peak_lag, peak_sign
