@@ -1,0 +1,104 @@
+Seasoned Files:
+data/products\merged_7861_data_processed.csv: TCDT25
+data/products\merged_6544_data_processed.csv: TAC marbre
+
+Clustered Groups:
+Group 0:
+  data/products\merged_7861_data_processed.csv: TCDT25
+  data/products\merged_1041_data_processed.csv: M.Org. 37°
+  data/products\merged_1040_data_processed.csv: M.Org.20°
+Group 1:
+  data/products\merged_6544_data_processed.csv: TAC marbre
+Group 2:
+  data/products\merged_7716_data_processed.csv: MetNicosul
+Group 3:
+  data/products\merged_6219_data_processed.csv: Perchlorat
+  data/products\merged_7717_data_processed.csv: MetChlorot
+Group 4:
+  data/products\merged_2094_data_processed.csv: Dalapon
+Group 5:
+  data/products\merged_6426_data_processed.csv: CO2agr
+Group 6:
+  data/products\merged_6282_data_processed.csv: SomAtrazMe
+
+Plot Statistics:
+data/products\merged_7861_data_processed.csv:
+  LbCourtParametre: TCDT25
+  plot_slope: 0.05041650194299398
+  plot_mean: 19.598279026034596
+  plot_std: 1.055490461581659
+  dep_slope: 0.03702492486521741
+  dep_mean: 19.735231605682223
+  dep_std: 0.5594849145684795
+data/products\merged_6544_data_processed.csv:
+  LbCourtParametre: TAC marbre
+  plot_slope: -0.029356958001206253
+  plot_mean: 9.930764253662376
+  plot_std: 0.7287913241308663
+  dep_slope: -0.0453627017928005
+  dep_mean: 9.961551007194188
+  dep_std: 0.5936726186677563
+data/products\merged_7716_data_processed.csv:
+  LbCourtParametre: MetNicosul
+  plot_slope: -0.0019560035183550234
+  plot_mean: 0.009031648304561674
+  plot_std: 0.0032421874489194312
+  dep_slope: None
+  dep_mean: None
+  dep_std: None
+data/products\merged_6219_data_processed.csv:
+  LbCourtParametre: Perchlorat
+  plot_slope: -0.298417680447008
+  plot_mean: 2.6425910582176493
+  plot_std: 1.0640450511982993
+  dep_slope: None
+  dep_mean: None
+  dep_std: None
+data/products\merged_1041_data_processed.csv:
+  LbCourtParametre: M.Org. 37°
+  plot_slope: 0.5996163363748145
+  plot_mean: 1.0674397806998623
+  plot_std: 0.49859817676191864
+  dep_slope: None
+  dep_mean: None
+  dep_std: None
+data/products\merged_1040_data_processed.csv:
+  LbCourtParametre: M.Org.20°
+  plot_slope: 0.7761840500758994
+  plot_mean: 0.9420572421649899
+  plot_std: 0.4218105823588342
+  dep_slope: None
+  dep_mean: None
+  dep_std: None
+data/products\merged_7717_data_processed.csv:
+  LbCourtParametre: MetChlorot
+  plot_slope: -0.005675600116579482
+  plot_mean: 0.043161047820724434
+  plot_std: 0.008890004354157762
+  dep_slope: None
+  dep_mean: None
+  dep_std: None
+data/products\merged_2094_data_processed.csv:
+  LbCourtParametre: Dalapon
+  plot_slope: 0.0019483196588297165
+  plot_mean: 0.017529321428475214
+  plot_std: 0.0074544009912355744
+  dep_slope: None
+  dep_mean: None
+  dep_std: None
+data/products\merged_6426_data_processed.csv:
+  LbCourtParametre: CO2agr
+  plot_slope: 0.2795847296883723
+  plot_mean: 1.013370948581853
+  plot_std: 1.3197727056928716
+  dep_slope: None
+  dep_mean: None
+  dep_std: None
+data/products\merged_6282_data_processed.csv:
+  LbCourtParametre: SomAtrazMe
+  plot_slope: 0.0021672063009465516
+  plot_mean: 0.013141461470568062
+  plot_std: 0.00811922777107469
+  dep_slope: None
+  dep_mean: None
+  dep_std: None
