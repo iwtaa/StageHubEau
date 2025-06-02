@@ -1,102 +1,176 @@
 import pandas as pd
-from parameter_plot import *
 import matplotlib.pyplot as plt
-from tqdm import tqdm
-from sklearn.cluster import AgglomerativeClustering
 import numpy as np
-
-
-def main():
-    files = load_data_list()
-    files = [file.replace(".csv", "_processed.csv") for file in files]
+from tqdm import tqdm
+from parameter_plot import *
+def process_file(file):
+    df = load_and_prepare_data(file)
+    map(df, '17', 'meancommune', save=True)
+    map(df, '17', 'stdcommune', save=True)
     
-    num_files = len(files)-45
+    plot_return = plot_time_series(df, 'deregionalized_valtraduite_smooth', save=True)
+    info_n = plot_return if plot_return is not None else (None, None, None)
+
+    slope, mean, std = info_n
+    print(f'plot_slope: {slope}, plot_mean: {mean}, plot_std: {std}')
+    
+    plot_yearly_monthly_average(df, year_col='valtraduite', month_col='centered_reduced_val_smooth', save=True)
+    period = calculate_and_plot_fft(df, 'centered_reduced_val_smooth', save=True)
+    
+    info_d = (None, None, None)
+    ddf = None
+    if period and 350.0 < period < 400.0:
+        ddf, info_d = deperiodize_timeseries(df, save=True)
+        return True, ddf, info_n, info_d, df['LbCourtParametre'].iloc[0]
+    else:
+        return False, ddf, info_n, info_d, df['LbCourtParametre'].iloc[0]
+
+def create_timeseries(file, file_label_map):
+    df = load_and_prepare_data(file)
+    df = df.sort_values(by='dateprel').set_index('dateprel')
+    #if file in seasoned_files:
+    #dep_return = deperiodize_timeseries(df, save=False)
+    #if dep_return:
+    #df = dep_return[0]
+    return pd.Series(df['centered_reduced_val_smooth'].resample('D').mean().interpolate(method='linear'), name=file_label_map[file])
+
+def calculate_cross_correlation(series_a, series_b):
+    result = cross_correlation(series_a, series_b, max_lag=190)
+    if result:
+        cor, lag, sign = result
+        cor, lag, sign = (0 if np.isnan(x) else x for x in (cor, lag, sign))
+        return cor, lag, sign
+    return 0, 0, 0
+
+def compute_correlation_matrices(all_files, file_label_map):
+    num_files = len(all_files)
     cor_matrix = np.zeros((num_files, num_files))
     lag_matrix = np.zeros((num_files, num_files))
     sign_matrix = np.zeros((num_files, num_files))
-    seasoned_values = []
-
-    for i in tqdm(range(num_files - 1, -1, -1)):
-        df_a = load_and_prepare_data(files[i])
-        map(df_a, '17', 'meancommune', save=True)
-        map(df_a, '17', 'stdcommune', save=True)
-        plot_time_series(df_a, 'deregionalized_valtraduite_smooth', save=True)
-        plot_yearly_monthly_average(df_a, year_col='valtraduite', month_col='centered_reduced_val_smooth', save=True)
-        period = calculate_and_plot_fft(df_a, 'centered_reduced_val_smooth', save=True)
-        if period is not None:
-            print(period)
-            print(350.0 < period and period < 400.0)
-            if 350.0 < period and period < 400.0:
-                dep_a = deperiodize_timeseries(df_a, save=True)
-                seasoned_values.append(df_a['LbCourtParametre'].iloc[0])
+    
+    indices = np.random.permutation(num_files)
+    mixed_files = [all_files[i] for i in indices]
+    
+    group_size = 10
+    for i in tqdm(range(0, num_files, group_size)):
+        dataframes = [create_timeseries(file, file_label_map) for file in mixed_files[i:i + group_size]]
         
-
-        df_a = df_a.sort_values(by='dateprel').set_index('dateprel')
-        avg_a = df_a['centered_reduced_val_smooth'].resample('D').mean().interpolate(method='linear')
-        series_a = pd.Series(avg_a, name='series_a')
-
-        for j in tqdm(range(i), leave=False):
-            df_b = load_and_prepare_data(files[j])
-            df_b = df_b.sort_values(by='dateprel').set_index('dateprel')
-            avg_b = df_b['centered_reduced_val_smooth'].resample('D').mean().interpolate(method='linear')    
-            series_b = pd.Series(avg_b, name='series_b')
+        for j, series_a in enumerate(dataframes):
+            file_index_a = indices[i + j]
             
-            result = cross_correlation(series_a, series_b, max_lag=190)
-            if result is not None:
-                cor, lag, sign = result
-            else:
-                cor, lag, sign = 0, 0, 0
-            if np.isnan(cor):
-                cor = 0
-            if np.isnan(lag):
-                lag = 0
-            if np.isnan(sign):
-                sign = 0
-            cor_matrix[i, j] = cor
-            cor_matrix[j, i] = cor
-            lag_matrix[i, j] = lag
-            lag_matrix[j, i] = -lag
-    sign_matrix[i, j] = sign
-    sign_matrix[j, i] = sign
-    cor_matrix[i==j] = 1.0
+            for k in range(j):
+                series_b = dataframes[k]
+                file_index_b = indices[i + k]
+                cor, lag, sign = calculate_cross_correlation(series_a, series_b)
+                
+                cor_matrix[file_index_a, file_index_b] = cor_matrix[file_index_b, file_index_a] = cor
+                lag_matrix[file_index_a, file_index_b] = lag
+                lag_matrix[file_index_b, file_index_a] = -lag
+                sign_matrix[file_index_a, file_index_b] = sign_matrix[file_index_b, file_index_a] = sign
+                
+            for m in range(i):
+                original_index = indices[m]
+                series_b = create_timeseries(all_files[original_index], file_label_map)
+                file_index_b = indices[m]
+                cor, lag, sign = calculate_cross_correlation(series_a, series_b)
+                
+                cor_matrix[file_index_a, file_index_b] = cor_matrix[file_index_b, file_index_a] = cor
+                lag_matrix[file_index_a, file_index_b] = lag
+                lag_matrix[file_index_b, file_index_a] = -lag
+                sign_matrix[file_index_a, file_index_b] = sign_matrix[file_index_b, file_index_a] = sign
+                
+    np.fill_diagonal(cor_matrix, 1.0)
+    return cor_matrix, lag_matrix, sign_matrix
+
+def plot_correlation_matrix(cor_matrix, all_files, file_label_map):
     plt.figure(figsize=(10, 8))
     plt.imshow(cor_matrix, cmap='RdBu', interpolation='nearest')
     plt.colorbar(label='Correlation')
     plt.title('Correlation Matrix')
-    plt.xticks(range(num_files), [file.split('_')[0] for file in files[:num_files]], rotation=90)
-    plt.yticks(range(num_files), [file.split('_')[0] for file in files[:num_files]])
+    plt.xticks(range(len(all_files)), [file_label_map[file] for file in all_files], rotation=90)
+    plt.yticks(range(len(all_files)), [file_label_map[file] for file in all_files])
     plt.tick_params(axis='both', which='major', labelsize=4)
     plt.tight_layout()
     plt.xlabel('File Index')
     plt.ylabel('File Index')
     plt.savefig('plots/correlation_matrix.png')
-    # Ensure the correlation matrix is symmetric and has no NaN values
+
+def identify_correlated_groups(cor_matrix, all_files, correlation_threshold=0.7):
     cor_matrix = np.nan_to_num(cor_matrix)
-    cor_matrix = np.clip(cor_matrix, -1, 1)  # Ensure values are within [-1, 1]
-    cor_matrix = (cor_matrix + cor_matrix.T) / 2  # Ensure symmetry
-
-    # Define a correlation threshold
-    correlation_threshold = 0.7  # Adjust as needed
-
-    # Identify groups of highly correlated files
+    cor_matrix = np.clip(cor_matrix, -1, 1)
+    cor_matrix = (cor_matrix + cor_matrix.T) / 2
+    
     clustered_groups = {}
     group_id = 0
-    assigned = [False] * num_files
-
-    for i in range(num_files):
+    assigned = [False] * len(all_files)
+    
+    for i in range(len(all_files)):
         if not assigned[i]:
             clustered_groups[group_id] = [i]
             assigned[i] = True
-            for j in range(i + 1, num_files):
+            for j in range(i + 1, len(all_files)):
                 if not assigned[j] and cor_matrix[i, j] > correlation_threshold:
                     clustered_groups[group_id].append(j)
                     assigned[j] = True
             group_id += 1
+    return clustered_groups
 
-    print("Clustered Groups:", clustered_groups)
-        
+def write_info_to_file(seasoned_files, clustered_groups, file_label_map, plot_stats_n, plot_stats_d, all_files):
+    with open("plots/info2.txt", "w") as f:
+        f.write("Seasoned Files:\n")
+        for file in seasoned_files:
+            f.write(f"{file}: {file_label_map[file]}\n")
+        f.write("\nClustered Groups:\n")
+        if clustered_groups:
+            for group_id, file_indices in clustered_groups.items():
+                f.write(f"Group {group_id}:\n")
+                for file_index in file_indices:
+                    file = all_files[file_index]
+                    f.write(f"  {file}: {file_label_map[file]}\n")
+        else:
+            f.write("No clustered groups identified.\n")
+        f.write("\nPlot Statistics:\n")
+        for file in all_files:
+            f.write(f"{file}:\n")
+            f.write(f"  LbCourtParametre: {file_label_map[file]}\n")
+            slope_n, mean_n, std_n = plot_stats_n[file]
+            slope_d, mean_d, std_d = plot_stats_d[file]
+            f.write(f"  Slope, Mean, Std\n")
+            f.write(f"  Central Reduced by Communes (n): {int(slope_n)*360}, {mean_n}, {std_n}\n")
+            if slope_d is not None:
+                f.write(f"  Deseasoned (d):                {int(slope_d)*360}, {mean_d}, {std_d}\n")
+            else:
+                f.write("  Deseasoned (d):                Not applicable\n")
+
+def main():
+    files = load_data_list()
+    files = [file.replace(".csv", "_processed.csv") for file in files]
+    num_files = len(files)
+    
+    seasoned_files = []
+    not_seasoned_files = []
+    file_label_map = {}
+    plot_stats_n = {}
+    plot_stats_d = {}
+    
+    for i in tqdm(range(num_files)):
+        is_seasoned, _, plot_stats_n[files[i]], plot_stats_d[files[i]], file_label_map[files[i]] = process_file(files[i])
+        print(is_seasoned)
+        if is_seasoned:
+            seasoned_files.append(files[i])
+        else:
+            not_seasoned_files.append(files[i])
+    
+    all_files = seasoned_files + not_seasoned_files
+    
+    #cor_matrix, lag_matrix, sign_matrix = compute_correlation_matrices(all_files, file_label_map, seasoned_files)
+    
+    #plot_correlation_matrix(cor_matrix, all_files, file_label_map)
+    
+    #clustered_groups = identify_correlated_groups(cor_matrix, all_files)
+    
+    #write_info_to_file(seasoned_files, clustered_groups, file_label_map, plot_stats, all_files)
+    write_info_to_file(seasoned_files, None, file_label_map, plot_stats_n, plot_stats_d, all_files)
 
 if __name__ == "__main__":
     main()
-
-

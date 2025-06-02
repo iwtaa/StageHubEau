@@ -192,6 +192,7 @@ def plot_time_series(df, col='valtraduite', save=False):
     else:
         plt.show()
     plt.close()
+    return (slope, mean, std)
 
 def smooth(df, window_size=60, col='centered_reduced_val'):
     if 'dateprel' not in df.columns:
@@ -294,12 +295,12 @@ def calculate_and_plot_fft(pdf, column='deregionalized_valtraduite_smooth', save
 def deperiodize_timeseries(pdf, save=False):
     column = 'deregionalized_valtraduite_smooth'
     if column not in pdf.columns:
-        return None
+        return None, (None, None, None)
 
     pdf = pdf.sort_values(by='dateprel').set_index('dateprel')
     daily_avg = pdf[column].resample('D').mean().interpolate(method='linear')
     if daily_avg.isnull().all():
-        return None
+        return None, (None, None, None)
 
     daily_avg_no_nan = daily_avg.dropna()
     fft = np.fft.fft(daily_avg_no_nan.values)
@@ -348,7 +349,7 @@ def deperiodize_timeseries(pdf, save=False):
         plt.show()
     plt.close()
 
-    return pd.Series(ifft.real, index=daily_avg_no_nan.index)
+    return pd.Series(ifft.real, index=daily_avg_no_nan.index), (slope, mean, std)
 
 def cross_correlation(series_a: pd.Series,
                       series_b: pd.Series,

@@ -55,6 +55,9 @@ def process_result_file(result_filename, output_filename, delimiter):
         print(f"An unexpected error occurred while processing {result_filename}: {e}")
 
 def merge_plv_files(output_filename='data/products/merged_plv_data.csv', delimiter=','):
+    # Create the directory if it doesn't exist
+    os.makedirs(os.path.dirname(output_filename), exist_ok=True)
+
     # Clear the output file before appending
     with open(output_filename, 'w', newline='', encoding='utf-8') as outfile:
         pass
@@ -118,7 +121,7 @@ def merge_and_extract_data(plv_indices=[0, 2, 3, 8, 9],
                            join_index_par=0,
                            delimiter=','):
     plv_filename = f'data/products/merged_plv_data.csv'
-    par_filename='data/products/PAR_20250522_SANDRE_short.csv'
+    par_filename='data/products/PAR_20250523_SANDRE_short.csv'
 
     plv_data = {}
     par_data = {}
@@ -235,7 +238,7 @@ def display_merged_data(filename='data/products/merged_data.csv', delimiter=',')
 
 def shorten_param_csv():
     input_filename='data/PAR_20250523_SANDRE.csv'
-    output_filename='data/products/PAR_20250522_SANDRE_short.csv'
+    output_filename='data/products/PAR_20250523_SANDRE_short.csv'
     delimiter=';'
     indices_to_keep=[0, 1, 6, 7, 10]
     try:
@@ -295,7 +298,6 @@ def unique_values(df):
 def analyse_csv_files():
     directory = "data/products"  # Replace with the actual directory if needed
     csv_files = list_csv_files(directory)
-    
     file_paths = []
     num_rows_list = []
     zero_percentage_list = []
@@ -383,9 +385,9 @@ def analyse_csv_files():
 
 
 if __name__ == '__main__':
-    shorten_param_csv()
-    merge_plv_files()
-    merge_result_files()
-    merge_and_extract_data()
+    #shorten_param_csv()
+    #merge_plv_files()
+    #merge_result_files()
+    #merge_and_extract_data()
     #display_merged_data()
     analyse_csv_files()
