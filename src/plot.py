@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 from parameter_plot import *
+
 def process_file(file):
     df = load_and_prepare_data(file)
     map(df, '17', 'meancommune', save=True)
@@ -18,20 +19,15 @@ def process_file(file):
     period = calculate_and_plot_fft(df, 'centered_reduced_val_smooth', save=True)
     
     info_d = (None, None, None)
-    ddf = None
     if period and 350.0 < period < 400.0:
-        ddf, info_d = deperiodize_timeseries(df, save=True)
-        return True, ddf, info_n, info_d, df['LbCourtParametre'].iloc[0]
+        _, info_d = deperiodize_timeseries(df, save=True)
+        return True, info_n, info_d, df['LbCourtParametre'].iloc[0]
     else:
-        return False, ddf, info_n, info_d, df['LbCourtParametre'].iloc[0]
+        return False, info_n, info_d, df['LbCourtParametre'].iloc[0]
 
 def create_timeseries(file, file_label_map):
     df = load_and_prepare_data(file)
     df = df.sort_values(by='dateprel').set_index('dateprel')
-    #if file in seasoned_files:
-    #dep_return = deperiodize_timeseries(df, save=False)
-    #if dep_return:
-    #df = dep_return[0]
     return pd.Series(df['centered_reduced_val_smooth'].resample('D').mean().interpolate(method='linear'), name=file_label_map[file])
 
 def calculate_cross_correlation(series_a, series_b):
@@ -42,7 +38,25 @@ def calculate_cross_correlation(series_a, series_b):
         return cor, lag, sign
     return 0, 0, 0
 
-def compute_correlation_matrices(all_files, file_label_map):
+def calculate_possible_groups(i, n):
+    if n > i or n <= 0:
+        return 0
+    
+    def combinations(n, k):
+        if k < 0 or k > n:
+            return 0
+        if k == 0 or k == n:
+            return 1
+        if k > n // 2:
+            k = n - k
+        res = 1
+        for j in range(k):
+            res = res * (n - j) // (j + 1)
+        return res
+
+    return combinations(i, n)
+
+def compute_correlation_matrices(all_files, file_label_map, seasoned=False):
     num_files = len(all_files)
     cor_matrix = np.zeros((num_files, num_files))
     lag_matrix = np.zeros((num_files, num_files))
@@ -51,7 +65,7 @@ def compute_correlation_matrices(all_files, file_label_map):
     indices = np.random.permutation(num_files)
     mixed_files = [all_files[i] for i in indices]
     
-    group_size = 10
+    group_size = 5
     for i in tqdm(range(0, num_files, group_size)):
         dataframes = [create_timeseries(file, file_label_map) for file in mixed_files[i:i + group_size]]
         
@@ -82,18 +96,18 @@ def compute_correlation_matrices(all_files, file_label_map):
     np.fill_diagonal(cor_matrix, 1.0)
     return cor_matrix, lag_matrix, sign_matrix
 
-def plot_correlation_matrix(cor_matrix, all_files, file_label_map):
+def plot_correlation_matrix(cor_matrix, all_files, file_label_map, title):
     plt.figure(figsize=(10, 8))
     plt.imshow(cor_matrix, cmap='RdBu', interpolation='nearest')
     plt.colorbar(label='Correlation')
-    plt.title('Correlation Matrix')
+    plt.title(title)
     plt.xticks(range(len(all_files)), [file_label_map[file] for file in all_files], rotation=90)
     plt.yticks(range(len(all_files)), [file_label_map[file] for file in all_files])
     plt.tick_params(axis='both', which='major', labelsize=4)
     plt.tight_layout()
     plt.xlabel('File Index')
     plt.ylabel('File Index')
-    plt.savefig('plots/correlation_matrix.png')
+    plt.savefig(f'plots/{title}.png')
 
 def identify_correlated_groups(cor_matrix, all_files, correlation_threshold=0.7):
     cor_matrix = np.nan_to_num(cor_matrix)
@@ -115,20 +129,14 @@ def identify_correlated_groups(cor_matrix, all_files, correlation_threshold=0.7)
             group_id += 1
     return clustered_groups
 
-def write_info_to_file(seasoned_files, clustered_groups, file_label_map, plot_stats_n, plot_stats_d, all_files):
+def write_info_to_file(seasoned_files, not_seasoned_files, file_label_map, plot_stats_n, plot_stats_d, all_files):
     with open("plots/info2.txt", "w") as f:
         f.write("Seasoned Files:\n")
         for file in seasoned_files:
             f.write(f"{file}: {file_label_map[file]}\n")
-        f.write("\nClustered Groups:\n")
-        if clustered_groups:
-            for group_id, file_indices in clustered_groups.items():
-                f.write(f"Group {group_id}:\n")
-                for file_index in file_indices:
-                    file = all_files[file_index]
-                    f.write(f"  {file}: {file_label_map[file]}\n")
-        else:
-            f.write("No clustered groups identified.\n")
+        f.write("\nNot Seasoned Files:\n")
+        for file in not_seasoned_files:
+            f.write(f"{file}: {file_label_map[file]}\n")
         f.write("\nPlot Statistics:\n")
         for file in all_files:
             f.write(f"{file}:\n")
@@ -154,23 +162,22 @@ def main():
     plot_stats_d = {}
     
     for i in tqdm(range(num_files)):
-        is_seasoned, _, plot_stats_n[files[i]], plot_stats_d[files[i]], file_label_map[files[i]] = process_file(files[i])
-        print(is_seasoned)
+        is_seasoned, plot_stats_n[files[i]], plot_stats_d[files[i]], file_label_map[files[i]] = process_file(files[i])
         if is_seasoned:
             seasoned_files.append(files[i])
         else:
             not_seasoned_files.append(files[i])
     
+    if seasoned_files:
+        cor_matrix_seasoned, _, _ = compute_correlation_matrices(seasoned_files, file_label_map)
+        plot_correlation_matrix(cor_matrix_seasoned, seasoned_files, file_label_map, "Correlation Matrix Seasoned")
+    
+    if not_seasoned_files:
+        cor_matrix_not_seasoned, _, _ = compute_correlation_matrices(not_seasoned_files, file_label_map)
+        plot_correlation_matrix(cor_matrix_not_seasoned, not_seasoned_files, file_label_map, "Correlation Matrix Not Seasoned")
+    
     all_files = seasoned_files + not_seasoned_files
-    
-    #cor_matrix, lag_matrix, sign_matrix = compute_correlation_matrices(all_files, file_label_map, seasoned_files)
-    
-    #plot_correlation_matrix(cor_matrix, all_files, file_label_map)
-    
-    #clustered_groups = identify_correlated_groups(cor_matrix, all_files)
-    
-    #write_info_to_file(seasoned_files, clustered_groups, file_label_map, plot_stats, all_files)
-    write_info_to_file(seasoned_files, None, file_label_map, plot_stats_n, plot_stats_d, all_files)
+    write_info_to_file(seasoned_files, not_seasoned_files, file_label_map, plot_stats_n, plot_stats_d, all_files)
 
 if __name__ == "__main__":
     main()
