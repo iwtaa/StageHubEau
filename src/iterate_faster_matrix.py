@@ -59,7 +59,7 @@ class MatrixPairedFileProcessor:
             for file1, file2 in itertools.combinations(self.loaded_data.keys(), 2):
                 i1 = self.file_index_map[file1]
                 i2 = self.file_index_map[file2]
-                res = self._do_calculation(file1, file2)
+                res = self._do_calculation(self.loaded_data[file1], self.loaded_data[file2])
                 self.matrix[i1, i2] = res
                 self.matrix[i2, i1] = res
             remaining_files = [f for f in files_list if f not in self.loaded_data]

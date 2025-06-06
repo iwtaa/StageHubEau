@@ -351,20 +351,28 @@ def deperiodize_timeseries(pdf, save=False):
 
     return pd.Series(ifft.real, index=daily_avg_no_nan.index), (slope, mean, std)
 
-def cross_correlation(series_a: pd.Series,
-                      series_b: pd.Series,
-                      max_lag: int = 30) -> pd.Series:
+def cross_correlation(df_a: pd.DataFrame,
+                      df_b: pd.DataFrame,
+                      series_a_col: str = 'centered_reduced_val_smooth',
+                      series_b_col: str = 'centered_reduced_val_smooth',
+                      max_lag: int = 190) -> tuple:
     """
-    Calcule la corrélation croisée entre deux séries temporelles
-    pour des lags de -max_lag à +max_lag.
-    Retourne une Series dont l’index sont les lags et les valeurs
-    les coefficients de corrélation.
+    Calculates the cross-correlation between two time series within two DataFrames
+    for lags from -max_lag to +max_lag.
+    Returns a tuple containing the peak correlation value, the lag at which
+    the peak occurs, and the sign of the correlation at the peak.
     """
-    # on aligne les deux séries sur l’intersection des dates
-    df = pd.concat([series_a, series_b], axis=1).dropna()
-    if df.empty:
+    # Convert DataFrame columns to Series
+    series_a = df_a[series_a_col].copy()
+    series_b = df_b[series_b_col].copy()
+
+    # Align the two series on the intersection of dates
+    series_a.index = pd.to_datetime(series_a.index)
+    series_b.index = pd.to_datetime(series_b.index)
+    df_concat = pd.concat([series_a, series_b], axis=1).dropna()
+    if df_concat.empty:
         return np.nan, np.nan, np.nan
-    a, b = df.iloc[:,0], df.iloc[:,1]
+    a, b = df_concat.iloc[:,0], df_concat.iloc[:,1]
     lags = range(-max_lag, max_lag+1)
     corrs = []
     for lag in lags:

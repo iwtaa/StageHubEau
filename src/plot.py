@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 from tqdm import tqdm
 from parameter_plot import *
 
@@ -56,46 +57,6 @@ def calculate_possible_groups(i, n):
 
     return combinations(i, n)
 
-def compute_correlation_matrices(all_files, file_label_map, seasoned=False):
-    num_files = len(all_files)
-    cor_matrix = np.zeros((num_files, num_files))
-    lag_matrix = np.zeros((num_files, num_files))
-    sign_matrix = np.zeros((num_files, num_files))
-    
-    indices = np.random.permutation(num_files)
-    mixed_files = [all_files[i] for i in indices]
-    
-    group_size = 5
-    for i in tqdm(range(0, num_files, group_size)):
-        dataframes = [create_timeseries(file, file_label_map) for file in mixed_files[i:i + group_size]]
-        
-        for j, series_a in enumerate(dataframes):
-            file_index_a = indices[i + j]
-            
-            for k in range(j):
-                series_b = dataframes[k]
-                file_index_b = indices[i + k]
-                cor, lag, sign = calculate_cross_correlation(series_a, series_b)
-                
-                cor_matrix[file_index_a, file_index_b] = cor_matrix[file_index_b, file_index_a] = cor
-                lag_matrix[file_index_a, file_index_b] = lag
-                lag_matrix[file_index_b, file_index_a] = -lag
-                sign_matrix[file_index_a, file_index_b] = sign_matrix[file_index_b, file_index_a] = sign
-                
-            for m in range(i):
-                original_index = indices[m]
-                series_b = create_timeseries(all_files[original_index], file_label_map)
-                file_index_b = indices[m]
-                cor, lag, sign = calculate_cross_correlation(series_a, series_b)
-                
-                cor_matrix[file_index_a, file_index_b] = cor_matrix[file_index_b, file_index_a] = cor
-                lag_matrix[file_index_a, file_index_b] = lag
-                lag_matrix[file_index_b, file_index_a] = -lag
-                sign_matrix[file_index_a, file_index_b] = sign_matrix[file_index_b, file_index_a] = sign
-                
-    np.fill_diagonal(cor_matrix, 1.0)
-    return cor_matrix, lag_matrix, sign_matrix
-
 def plot_correlation_matrix(cor_matrix, all_files, file_label_map, title):
     plt.figure(figsize=(10, 8))
     plt.imshow(cor_matrix, cmap='RdBu', interpolation='nearest')
@@ -150,6 +111,8 @@ def write_info_to_file(seasoned_files, not_seasoned_files, file_label_map, plot_
             else:
                 f.write("  Deseasoned (d):                Not applicable\n")
 
+from iterate_faster_matrix import MatrixPairedFileProcessor
+
 def main():
     files = load_data_list()
     files = [file.replace(".csv", "_processed.csv") for file in files]
@@ -168,13 +131,12 @@ def main():
         else:
             not_seasoned_files.append(files[i])
     
-    if seasoned_files:
-        cor_matrix_seasoned, _, _ = compute_correlation_matrices(seasoned_files, file_label_map)
-        plot_correlation_matrix(cor_matrix_seasoned, seasoned_files, file_label_map, "Correlation Matrix Seasoned")
-    
-    if not_seasoned_files:
-        cor_matrix_not_seasoned, _, _ = compute_correlation_matrices(not_seasoned_files, file_label_map)
-        plot_correlation_matrix(cor_matrix_not_seasoned, not_seasoned_files, file_label_map, "Correlation Matrix Not Seasoned")
+    seasoned_files_compute = MatrixPairedFileProcessor(
+        {file: os.path.getsize(file) for file in seasoned_files},
+        max_memory_mb=2000,
+        calculation_function=cross_correlation
+    )
+    plot_correlation_matrix(seasoned_files_compute.get_matrix(), seasoned_files, file_label_map, "Seasoned_Correlation_Matrix")
     
     all_files = seasoned_files + not_seasoned_files
     write_info_to_file(seasoned_files, not_seasoned_files, file_label_map, plot_stats_n, plot_stats_d, all_files)
