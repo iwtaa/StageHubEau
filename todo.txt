@@ -12,7 +12,7 @@ x 2025-05-28 2025-05-28 @explorer des correlations entre les mesures pri:B
 x 2025-05-27 2025-05-27 @explorer les periodes pour la @potabilite pri:B
 x 2025-05-27 2025-05-27 Download and use raw full database instead of +api pri:B
 x 2025-05-28 2025-05-28 Map la variance par communes pri:B
-(B) Map la regression lineaire par communes
+x 2025-06-06 2025-06-06 Map la regression lineaire par communes pri:B
 x 2025-05-28 2025-05-28 Faire regression lineaire pri:B
 x 2025-05-28 2025-05-28 De-saisonaliser les donnees pri:B
 x 2025-05-28 2025-05-28 Faire auto-correlation pour detecter les periodes, et en retenir une valeur pri:B
