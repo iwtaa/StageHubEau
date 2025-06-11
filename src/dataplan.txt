@@ -1,0 +1,37 @@
+Start:
+
+- cddept
+- inseecommuneprinc
+- nomcommuneprinc
+- dateprel
+- heureprel
+- cdparametre
+- cdunitereferencesiseeaux
+- limitequal
+- valtraduite
+- NomParametre
+- LbCourtParametre
+
+Filters:
+- Numerical values only
+- != 0 values only
+
+Thresholds:
+- Data per commune
+- Data per parameter
+
+Projects:
+- Deregionalize
+- Deseasonalize
+- Map average, std
+- Calculate seasonality                                     Scope: National
+- Calculate correlation for each pairs of params            Scope: Local
+
+Calculated value:
+
+- centered_reduced_val
+- stdcommune
+- meancommune
+- deregionalized_valtraduite
+- deregionalized_valtraduite_smooth
+- centered_reduced_val_smooth
