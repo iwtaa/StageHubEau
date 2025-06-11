@@ -6,6 +6,7 @@ import time
 from tqdm import tqdm
 import numpy as np
 from sklearn.linear_model import LinearRegression
+import jax
 import matplotlib.pyplot as plt
 
 GEO_API_URL = 'https://geo.api.gouv.fr/departements/{}/communes?format=geojson&geometry=contour'
@@ -351,40 +352,46 @@ def deperiodize_timeseries(pdf, save=False):
 
     return pd.Series(ifft.real, index=daily_avg_no_nan.index), (slope, mean, std)
 
+import jax.numpy as jnp
+
 def cross_correlation(df_a: pd.DataFrame,
                       df_b: pd.DataFrame,
-                      series_a_col: str = 'centered_reduced_val_smooth',
-                      series_b_col: str = 'centered_reduced_val_smooth',
-                      max_lag: int = 190) -> tuple:
-    """
-    Calculates the cross-correlation between two time series within two DataFrames
-    for lags from -max_lag to +max_lag.
-    Returns a tuple containing the peak correlation value, the lag at which
-    the peak occurs, and the sign of the correlation at the peak.
-    """
-    # Convert DataFrame columns to Series
-    series_a = df_a[series_a_col].copy()
-    series_b = df_b[series_b_col].copy()
+                      series_a_col: str,
+                      series_b_col: str,
+                      max_lag: int) -> tuple:
+    series_a = df_a[series_a_col].values
+    series_b = df_b[series_b_col].values
 
-    # Align the two series on the intersection of dates
-    series_a.index = pd.to_datetime(series_a.index)
-    series_b.index = pd.to_datetime(series_b.index)
-    df_concat = pd.concat([series_a, series_b], axis=1).dropna()
-    if df_concat.empty:
-        return np.nan, np.nan, np.nan
-    a, b = df_concat.iloc[:,0], df_concat.iloc[:,1]
-    lags = range(-max_lag, max_lag+1)
-    corrs = []
-    for lag in lags:
-        if lag < 0:
-            corr = a.shift(-lag).corr(b)
-        else:
-            corr = a.corr(b.shift(lag))
-        corrs.append(corr)
+    df_a['date'] = df_a['dateprel'].dt.date
+    df_b['date'] = df_b['dateprel'].dt.date
+
+    daily_avg_a = df_a.groupby('date')[series_a_col].mean()
+    daily_avg_b = df_b.groupby('date')[series_b_col].mean()
+
+    series_a = daily_avg_a.values
+    series_b = daily_avg_b.values
     
-    cross_corr = pd.Series(corrs, index=lags)
-    abs_cross_corr = abs(cross_corr).fillna(0)
-    peak_value = abs_cross_corr.max()
-    peak_lag = abs_cross_corr.idxmax()
-    peak_sign = cross_corr.fillna(0)[peak_lag] >= 0 if not np.isnan(peak_lag) else np.nan
-    return peak_value, peak_lag, peak_sign
+    n = len(series_a)
+    m = len(series_b)
+    
+    if n != m:
+        min_len = min(n, m)
+        series_a = series_a[:min_len]
+        series_b = series_b[:min_len]
+        n = min_len
+        m = min_len
+
+    series_a = (series_a - jnp.mean(series_a)) / jnp.std(series_a)
+    series_b = (series_b - jnp.mean(series_b)) / jnp.std(series_b)
+
+    cross_corr = []
+    lags = range(-max_lag, max_lag + 1)
+
+    for lag in lags:
+        if lag >= 0:
+            correlation = jnp.corrcoef(series_a[lag:], series_b[:-lag])[0, 1]
+        else:
+            correlation = jnp.corrcoef(series_a[:lag], series_b[-lag:])[0, 1]
+        cross_corr.append(correlation)
+
+    return lags, cross_corr

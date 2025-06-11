@@ -1,6 +1,7 @@
 import itertools
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 class MatrixPairedFileProcessor:
     def __init__(self, files_info, max_memory_mb, calculation_function):
@@ -10,12 +11,12 @@ class MatrixPairedFileProcessor:
         self.current_memory_usage = 0
         self._do_calculation = calculation_function
         self.total_memory_loaded = 0
-        self.matrix = np.zeros((len(files_info), len(files_info)), dtype=np.float32)
+        self.matrix = np.zeros((3, len(files_info), len(files_info)), dtype=np.float32)
         self.saved_loads = 0
         self.file_index_map = {filename: i for i, filename in enumerate(files_info.keys())}
 
     def get_matrix(self):
-        return np.triu(self.matrix) + np.tril(self.matrix.T, k=-1)
+        return self.matrix
 
     def _load_file(self, filename):
         file_size = self.files_info[filename]
@@ -49,30 +50,82 @@ class MatrixPairedFileProcessor:
         files_list = sorted(list(self.files_info.keys()), key=lambda x: self.files_info[x], reverse=True)
         processed_files = set()
         remaining_files = [f for f in files_list if f not in processed_files]
+        bag_index = 0
+        total_pairs = len(list(itertools.combinations(files_list, 2)))
+        total_files_size = sum(self.files_info.values())
+        possible_bags = total_files_size / self.max_memory_bytes
+        print(f"Total pairs: {total_pairs}")
+        print(f"Total files size: {total_files_size / (1024 * 1024):.2f} MB")
+        print(f"Max memory size: {self.max_memory_bytes / (1024 * 1024):.2f} MB")
+        print(f"Averaging possible bags: {possible_bags:.2f}")
+        
         while remaining_files:
             bag_memory = 0
+            files_to_load = []
             for f in remaining_files:
-                if bag_memory + self.files_info[f] <= self.max_memory_bytes:
+                temp_files = [file for file in remaining_files if file not in processed_files and file != f]
+                if not temp_files:
+                    fmax_size = 0
+                else:
+                    fmax_size = self.files_info[max(temp_files, key=lambda x: self.files_info[x])]
+
+                if bag_memory + self.files_info[f] + fmax_size <= self.max_memory_bytes:
                     bag_memory += self.files_info[f]
+                    files_to_load.append(f)
                     processed_files.add(f)
-                    self._load_file(f)
-            for file1, file2 in itertools.combinations(self.loaded_data.keys(), 2):
-                i1 = self.file_index_map[file1]
-                i2 = self.file_index_map[file2]
-                res = self._do_calculation(self.loaded_data[file1], self.loaded_data[file2])
-                self.matrix[i1, i2] = res
-                self.matrix[i2, i1] = res
-            remaining_files = [f for f in files_list if f not in self.loaded_data]
-            for f in remaining_files:
-                if self._load_file(f):
-                    for loaded_f in list(self.loaded_data.keys()):
-                        if f == loaded_f:
+            if not files_to_load:
+                return
+            for f in files_to_load:
+                self._load_file(f)
+            
+            pairs = list(itertools.combinations(files_to_load, 2))
+            remaining_files = [f for f in remaining_files if f not in files_to_load]
+            all_items = len(pairs) + len(remaining_files) * len(files_to_load)
+
+            print(len(pairs), len(remaining_files), len(files_to_load), all_items)
+            with tqdm(total=all_items, desc=f"Processing bag {bag_index + 1}") as pbar:
+                for file_a, file_b in pairs:
+                    index_a = self.file_index_map[file_a]
+                    index_b = self.file_index_map[file_b]
+                    res = self._do_calculation(self.loaded_data[file_a], self.loaded_data[file_b])
+                    print(res)
+                    if res:
+                        cor, lag, sign = res
+                        self.matrix[0, index_a, index_b] = cor
+                        self.matrix[1, index_a, index_b] = lag
+                        self.matrix[2, index_a, index_b] = sign
+                        self.matrix[0, index_b, index_a] = cor
+                        self.matrix[1, index_b, index_a] = -lag
+                        self.matrix[2, index_b, index_a] = sign
+                    pbar.update(1)
+                    break
+                break
+                bag_index += 1
+                
+                for f in remaining_files:
+                    if not self._load_file(f):
+                        continue
+                    df = self.loaded_data[f]
+                    for other_file in files_to_load:
+                        if not self._load_file(other_file):
                             continue
-                        i1 = self.file_index_map[f]
-                        i2 = self.file_index_map[loaded_f]
-                        res = self._do_calculation(f, loaded_f)
-                        self.matrix[i1, i2] = res
-                        self.matrix[i2, i1] = res
+                        ds = self.loaded_data[other_file]
+                        res = self._do_calculation(df, ds)
+                        if res:
+                            cor, lag, sign = res
+                            index_a = self.file_index_map[f]
+                            index_b = self.file_index_map[other_file]
+                            self.matrix[0, index_a, index_b] = cor
+                            self.matrix[1, index_a, index_b] = lag
+                            self.matrix[2, index_a, index_b] = sign
+                            self.matrix[0, index_b, index_a] = cor
+                            self.matrix[1, index_b, index_a] = -lag
+                            self.matrix[2, index_b, index_a] = sign
+                        pbar.update(1)
                     self._unload_file(f)
+                    
             self._unload_all()
-            remaining_files = [f for f in files_list if f not in processed_files]
+            
+            
+
+

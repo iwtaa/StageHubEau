@@ -7,6 +7,7 @@ from parameter_plot import *
 
 def process_file(file):
     df = load_and_prepare_data(file)
+    '''
     map(df, '17', 'meancommune', save=True)
     map(df, '17', 'stdcommune', save=True)
     
@@ -17,6 +18,11 @@ def process_file(file):
     print(f'plot_slope: {slope}, plot_mean: {mean}, plot_std: {std}')
     
     plot_yearly_monthly_average(df, year_col='valtraduite', month_col='centered_reduced_val_smooth', save=True)
+    '''
+    plot_return = plot_time_series(df, 'deregionalized_valtraduite_smooth', save=True)
+    info_n = plot_return if plot_return is not None else (None, None, None)
+
+
     period = calculate_and_plot_fft(df, 'centered_reduced_val_smooth', save=True)
     
     info_d = (None, None, None)
@@ -116,7 +122,7 @@ from iterate_faster_matrix import MatrixPairedFileProcessor
 def main():
     files = load_data_list()
     files = [file.replace(".csv", "_processed.csv") for file in files]
-    num_files = len(files)
+    num_files = len(files) - 30
     
     seasoned_files = []
     not_seasoned_files = []
@@ -133,10 +139,21 @@ def main():
     
     seasoned_files_compute = MatrixPairedFileProcessor(
         {file: os.path.getsize(file) for file in seasoned_files},
-        max_memory_mb=2000,
+        max_memory_mb=50,
         calculation_function=cross_correlation
     )
-    plot_correlation_matrix(seasoned_files_compute.get_matrix(), seasoned_files, file_label_map, "Seasoned_Correlation_Matrix")
+    seasoned_files_compute.process_all_file_pairs()
+    peak, lag, sign = seasoned_files_compute.get_matrix()
+    plot_correlation_matrix(peak, seasoned_files, file_label_map, "Seasoned_Correlation_Matrix")
+
+    not_seasoned_files_compute = MatrixPairedFileProcessor(
+        {file: os.path.getsize(file) for file in not_seasoned_files},
+        max_memory_mb=50,
+        calculation_function=cross_correlation
+    )
+    not_seasoned_files_compute.process_all_file_pairs()
+    peak2, lag2, sign2 = not_seasoned_files_compute.get_matrix()
+    plot_correlation_matrix(peak2, not_seasoned_files, file_label_map, "Not_Seasoned_Correlation_Matrix")
     
     all_files = seasoned_files + not_seasoned_files
     write_info_to_file(seasoned_files, not_seasoned_files, file_label_map, plot_stats_n, plot_stats_d, all_files)
