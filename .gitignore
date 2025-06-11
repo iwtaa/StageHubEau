@@ -17,4 +17,5 @@ src/playground.py
 data/*
 maps/*
 plots/*
+temp/*
 SRC_CLEAN/Playground.py
