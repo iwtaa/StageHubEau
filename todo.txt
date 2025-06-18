@@ -17,5 +17,5 @@ x 2025-05-28 2025-05-28 Faire regression lineaire pri:B
 x 2025-05-28 2025-05-28 De-saisonaliser les donnees pri:B
 x 2025-05-28 2025-05-28 Faire auto-correlation pour detecter les periodes, et en retenir une valeur pri:B
 x 2025-05-28 2025-05-28 Faire matrice correlation apres pre-processing pri:B
-(B) Implement correlation matrix calculation
-(B) Make a whole processus to show progress
+x 2025-06-18 2025-06-18 Implement correlation matrix calculation pri:B
+x 2025-06-18 2025-06-18 Make a whole processus to show progress pri:B
