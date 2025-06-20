@@ -75,6 +75,7 @@ def analyze(path):
     
     whole_json = { 'cdparams': [] }
     for cdparam, files in tqdm(cdparams_files.items(), desc='Iterating cdparams'):
+        
         count = {}
         zero_values = 0
         for file in files:
@@ -110,6 +111,7 @@ def analyze(path):
         os.makedirs(os.path.dirname(stats_file_path), exist_ok=True)
         with open(stats_file_path, 'w') as f:
             json.dump(cdparam_json, f, indent=4)
+        
         cdparam_files_json = {
             'cdparam': str(cdparam),
             'files': files
@@ -140,18 +142,31 @@ def merge_all(path):
         output_file = os.path.join(path, 'data/clean', f'clean_{cdparametre}.txt')
         merged_df.to_csv(output_file, sep='\t', index=False, encoding='latin-1')
 
-def shorten_param():
-    return
+import csv
+def shorten_param_csv():
+    input_filename='data/PAR_20250523_SANDRE.csv'
+    output_filename='data/clean/PAR_SANDRE_short.txt'
+    delimiter=';'
+    indices_to_keep=[0, 1, 6, 7, 10, 184]
+    cdparams = get_selected_cdparams('C:/Users/mberthie/Documents/StageHubEau/')
+
+    # Read the CSV file into a pandas DataFrame
+    df = pd.read_csv(input_filename, delimiter=delimiter, encoding='latin-1', dtype=str)
+    df = df.rename(columns={'ï»¿CdParametre': 'CdParametre'})
+    df = df.iloc[1:, indices_to_keep]
+    df = df[df['CdParametre'].isin(cdparams)]
+    print(df.columns.tolist())
+    df.to_csv(output_filename, sep='\t', index=False, encoding='latin-1')
 
 if __name__ == '__main__':
-    path = '/home/iwta/Documents/Univ/StageHubEau/data'
+    path = 'C:/Users/mberthie/Documents/StageHubEau/data'
     #merge_com(path)
     #merge_results(path)
     #merge_plv(path)
 
     #analyze(path)
 
-    #merge_all('/home/iwta/Documents/Univ/StageHubEau/')
+    #merge_all('C:/Users/mberthie/Documents/StageHubEau/')
 
-    shorten_param()
+    shorten_param_csv()
     
