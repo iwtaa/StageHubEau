@@ -2,6 +2,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[english]{babel}
+\usepackage{hyperref}
 
 \title{My Report}
 \author{Your Name}
@@ -11,7 +12,76 @@
 
 \maketitle
 
+\newpage
+\tableofcontents
+\newpage
+
 \section{Introduction}
-This is a basic LaTeX document.
+Provide an overview of the internship, its context, and main objectives.
+
+\section{Data Preparation}
+The first step of the internship involved finding open source data on water quality in France. The internship supervisor provided several sources, notably the \textit{HubEau} (https://hubeau.eaufrance.fr/) and TODO website that offer water quality data by French communes.
+
+It is important to note that the data can be provided in multiple ways:
+\begin{itemize}
+    \item \textbf{Databases}: These allow users to download the entire raw dataset for offline analysis.
+    \item \textbf{APIs}: These provide access to portions of the data through URL-based queries, enabling more targeted and up-to-date data. Especially used for online services using such data.
+\end{itemize}
+
+The HubEau platform is an API that serves as an interface to the underlying databases available on \texttt{data.gouv.fr}.
+In this internship, we mostly focused on the databases, to explore and create tools of analysis first, and maybe later create services with the APIs.
+\subsection{Databases}
+Let's list the different databases available on the subject:
+
+\begin{itemize}
+    \item \textbf{Sandre Reference Databases} (\url{https://www.sandre.eaufrance.fr/}) -- All datasets related to water quality in France are structured using standardized referentials defined by SANDRE. These referentials provide a unified framework for parameters, codes, and nomenclatures, ensuring consistency and interoperability across different data sources. The Sandre reference databases are therefore fundamental for any analysis or integration of water quality data.
+    \item \textbf{Sanitary Control of Distributed Water} (\url{https://www.data.gouv.fr/fr/datasets/resultats-du-controle-sanitaire-de-leau-distribuee-commune-par-commune/}, \url{https://hubeau.eaufrance.fr/page/api-qualite-eau-potable}) -- Contains results of sanitary controls of distributed water, with data available by municipality and updated every few days to months. Parameters include microbiological, physical, and chemical indicators.
+    \item \textbf{Sanitary Control of Tap Water} (\url{https://www.data.gouv.fr/fr/datasets/resultats-du-controle-sanitaire-de-leau-du-robinet/}) -- Provides additional results on tap water quality.
+    \item \textbf{Groundwater Quality} (\url{https://ades.eaufrance.fr/Recherche/Index/QualitometreAvance?g=9220e3}) -- Provides groundwater quality measurements, though no API is available.
+    \item \textbf{Quality of Groundwater and Surface Water} (\url{https://hubeau.eaufrance.fr/page/api-qualite-nappes}, \url{https://hubeau.eaufrance.fr/page/api-qualite-cours-deau}) -- APIs for accessing groundwater and surface water quality data from the ADES database.
+    \item \textbf{Legislation on Drinking Water} (\url{https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000274485/2022-11-28/}) -- Provides criteria for drinking water.
+\end{itemize}
+
+Water quality is monitored at several key stages as it moves from natural sources to the consumer's tap. Analyses are first performed at the source—whether groundwater or surface water—to assess initial quality. After collection, water is treated at sanitary stations, where further analyses ensure it meets drinking standards before entering the distribution network. Finally, additional checks are conducted at random taps within the network to verify that quality is maintained up to the point of use.
+
+For the purposes of this internship, we chose to focus our efforts on the \textbf{Sanitary Control of Distributed Water} database. This dataset offers comprehensive and regularly updated information on water quality at the municipal level, making it an ideal starting point for analysis and tool development.
+Throughout this project, we will of course make extensive use of the SANDRE database itself. The SANDRE framework organizes water quality information by assigning a unique identifier, called \texttt{cdparametre}, to each measured element—whether it is a physical, chemical, or environmental parameter. In all the referenced databases, each data entry corresponds to the measurement of a single \texttt{cdparametre} at a specific point in time. This consistent structure enables unified analysis across datasets and simplifies the integration of new sources in the future.
+\subsection{Data Cleaning}
+The data cleaning phase was essential due to the heterogeneity and scale of the datasets. All data sources were provided in CSV format, but with differing delimiters and encoding schemes, necessitating careful standardization during import. In particular, the SANDRE reference database contained over one thousand columns, requiring a systematic approach to column selection.
+
+To ensure analytical relevance and computational efficiency, only the columns pertinent to the study—such as parameter codes (\texttt{cdparametre}), measurement values, temporal information, and geographical identifiers—were retained. This selective extraction significantly reduced dataset complexity and facilitated subsequent processing.
+
+Given the overall database size of approximately 15GB, it was not feasible to load the entire dataset into memory. To address this, the data was partitioned by parameter, resulting in separate files for each \texttt{cdparametre}. This strategy enabled parameter-wise processing, optimizing memory usage and allowing for scalable data manipulation.
+
+Data integration from multiple sources was performed using shared keys, such as parameter codes and location identifiers, to ensure consistency and enable cross-referencing. Throughout the cleaning process, rigorous attention was paid to harmonizing data types and formats, as well as identifying and rectifying anomalies or inconsistencies. This comprehensive data preparation established a robust foundation for all subsequent analyses.
+
+\subsection{French government }
+
+\section{Data Exploration}
+Summarize the initial exploration of the dataset, with an emphasis on timeseries analysis.
+\subsection{Sandre Parameters}
+Introduce the Sandre parameters and discuss their significance in the analysis.
+\subsection{Qualitative vs Quantitative Data}
+Clarify the distinction between qualitative and quantitative variables in the dataset.
+\subsection{Types of Timeseries}
+Characterize the various types of timeseries encountered, such as detection series (predominantly 0.0 values) and constant series.
+
+\section{Data Analysis}
+\subsection{Selection of Sandre Parameters}
+Explain the methodology for selecting relevant Sandre parameters for further analysis.
+\subsection{Geographical and Temporal Segmentation}
+Discuss the approach for dividing the analysis by geographical regions and time periods.
+\subsection{Geographical Analysis}
+Present the results of the geographical analysis, including mapping of means and standard deviations.
+\subsection{Temporal Analysis}
+Describe the temporal analysis, focusing on linear regression and identification of seasonal patterns.
+\subsection{Correlation Analysis}
+Investigate correlations within the data, including detrending techniques to account for seasonality.
+
+\section{Future Work}
+Suggest possible directions for future research and improvements.
+
+\section{Conclusion}
+Summarize the key findings and contributions of the internship.
 
 \end{document}
