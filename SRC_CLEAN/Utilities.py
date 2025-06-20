@@ -1,11 +1,40 @@
 import os
 import json
 import pandas as pd
+from sklearn.linear_model import LinearRegression
+
+def linear_regression(df, time_col, value_col):
+    time = (df[time_col] - df[time_col].min()).dt.days.values.reshape(-1, 1)
+    values = df[value_col].values
+
+    model = LinearRegression()
+    model.fit(time, values)
+
+    slope = model.coef_[0]
+    intercept = model.intercept_
+
+    return slope, intercept
+
+def get_cdparam_nameshort(cdparam):
+    path = os.path.join(os.getcwd(), 'data/PAR_SANDRE_short.txt')
+    df = pd.read_csv(path, sep='\t', encoding='latin-1')
+    if cdparam in df['CdParametre'].values:
+        return df.loc[df['CdParametre'] == cdparam, 'LbCourtParametre'].values[0]
+
+def get_cdparam_name(cdparam):
+    path = os.path.join(os.getcwd(), 'data/PAR_SANDRE_short.txt')
+    df = pd.read_csv(path, sep='\t', encoding='latin-1')
+    if cdparam in df['CdParametre'].values:
+        return df.loc[df['CdParametre'] == cdparam, 'NomParametre'].values[0]
 
 def get_selected_cdparams(path):
     with open(os.path.join(path, 'extract', 'cdparams_selected.txt'), 'r') as f:
         cdparams_selected = [line.strip() for line in f if line.strip()]
     return cdparams_selected
+
+def get_by_commune(df):
+    for insee, group in df.groupby('inseecommuneprinc'):
+        yield insee, group
 
 def load_cdparam_jsons(cdparams, path = '/home/iwta/Documents/Univ/StageHubEau/'):
     with open(os.path.join(path, 'data/stats', 'files_paths.json'), 'r') as f:
@@ -27,5 +56,5 @@ def load_folder_data(path):
         for file in files:
             if file.endswith('.txt'):
                 full_path = os.path.join(root, file)
-                df = pd.read_csv(full_path, sep='\t', encoding='latin-1', on_bad_lines='skip')
+                df = pd.read_csv(full_path, sep='\t', encoding='latin-1', on_bad_lines='skip', low_memory=False)
                 yield df
