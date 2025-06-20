@@ -3,6 +3,7 @@ import pandas as pd
 from tqdm import tqdm
 import os
 import json
+from Utilities import *
 
 def merge_files(file_names, output_file, separator=','):
     list_df = []
@@ -117,6 +118,31 @@ def analyze(path):
     with open(os.path.join(path, 'stats', f'files_paths.json'), 'w') as f:
         json.dump(whole_json, f, indent=4)
 
+from tqdm import tqdm
+def merge_all(path):
+    merged_path = os.path.join(path, 'data/merged')
+    cdparams = get_selected_cdparams(path)
+    file_names = glob.glob(os.path.join(merged_path, '***/DIS_PLV_*.txt'))
+    dfs_plv = []
+    for file in tqdm(file_names, desc='Reading DIS_PLV files'):
+        df = pd.read_csv(file, sep='\t', encoding='latin-1', on_bad_lines='skip')
+        dfs_plv.append(df)
+    df_plv = pd.concat(dfs_plv, ignore_index=True)
+    df_plv.drop_duplicates(inplace=True)
+    
+    for cdparametre_data in tqdm(load_cdparam_jsons(cdparams, path), desc='Processing CDPARAMS', total=len(cdparams)):
+        df, cdparametre = cdparametre_data
+        merged_df = pd.merge(df, df_plv, on='referenceprel', how='left')
+        merged_df.drop_duplicates(inplace=True)
+        selected_columns = ['cddept_x', 'cdparametre', 'valtraduite', 'inseecommuneprinc', 'dateprel', 'heureprel']
+        merged_df = merged_df[selected_columns]
+        merged_df = merged_df.dropna(axis=0)
+        output_file = os.path.join(path, 'data/clean', f'clean_{cdparametre}.txt')
+        merged_df.to_csv(output_file, sep='\t', index=False, encoding='latin-1')
+
+def shorten_param():
+    return
+
 if __name__ == '__main__':
     path = '/home/iwta/Documents/Univ/StageHubEau/data'
     #merge_com(path)
@@ -124,4 +150,8 @@ if __name__ == '__main__':
     #merge_plv(path)
 
     #analyze(path)
+
+    #merge_all('/home/iwta/Documents/Univ/StageHubEau/')
+
+    shorten_param()
     
