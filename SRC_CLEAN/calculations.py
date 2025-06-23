@@ -9,7 +9,7 @@ if  __name__ == "__main__":
     print(cdparams_selected)
 
     for df in load_folder_data(os.path.join(cwd, 'data', 'clean')):
-        cdparam = df['cdparametre'].iloc[0]
+        cdparam = int(df['cdparametre'].iloc[0])
         df['dateprel'] = pd.to_datetime(df['dateprel'], errors='coerce')
         
         df['valtraduite_D'] = None

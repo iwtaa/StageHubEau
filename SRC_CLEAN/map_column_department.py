@@ -85,12 +85,18 @@ def main():
     data_folder = os.path.join(path, 'data/clean')
     
     for df in tqdm(load_folder_data(data_folder), desc="Processing files", file=sys.stdout, total=21):
+        
         cdparam = df['cdparametre'].iloc[0]
         df['dateprel'] = pd.to_datetime(df['dateprel'], errors='coerce')
         min = df['valtraduite'].quantile(0.05)
         max = df['valtraduite'].quantile(0.95)
         filename = None
-        name = get_cdparam_nameshort(cdparam).replace(' ', '_').replace('/', '_').replace('\\', '_')
+        param_name_short = get_cdparam_nameshort(str(cdparam))
+        if param_name_short is None:
+            print(f"Warning: get_cdparam_nameshort returned None for cdparam {cdparam}. Using 'unknown_param' as name.")
+            name = "unknown_param"
+        else:
+            name = param_name_short.replace(' ', '_').replace('/', '_').replace('\\', '_')
         for year in range(2016, 2025):
             if save:
                 os.makedirs(os.path.join(path, f'plots/maps/{name}'), exist_ok=True)

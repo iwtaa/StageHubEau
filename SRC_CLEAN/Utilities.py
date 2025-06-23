@@ -18,8 +18,13 @@ def linear_regression(df, time_col, value_col):
 def get_cdparam_nameshort(cdparam):
     path = os.path.join(os.getcwd(), 'data/PAR_SANDRE_short.txt')
     df = pd.read_csv(path, sep='\t', encoding='latin-1')
-    if cdparam in df['CdParametre'].values:
-        return df.loc[df['CdParametre'] == cdparam, 'LbCourtParametre'].values[0]
+    try:
+        cdparam_int = int(float(cdparam))
+    except ValueError:
+        return None
+    print("cdparam_int:", cdparam_int)
+    if cdparam_int in df['CdParametre'].values:
+        return df.loc[df['CdParametre'] == cdparam_int, 'LbCourtParametre'].values[0]
 
 def get_cdparam_name(cdparam):
     path = os.path.join(os.getcwd(), 'data/PAR_SANDRE_short.txt')
