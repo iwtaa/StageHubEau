@@ -58,6 +58,8 @@ def merge_plv(path):
         merge_files(file_names_dept, output_file_dept)
 
 def analyze(path):
+    import gc
+
     cdparams_files = {}
     for root, _, files in os.walk(os.path.join(path, 'merged')):
         for file in files:
@@ -71,52 +73,95 @@ def analyze(path):
                     cdparams_files[cdparam] = []
                 cdparams_files[cdparam].append(file_path)
 
-    import matplotlib.pyplot as plt
-    
-    whole_json = { 'cdparams': [] }
-    for cdparam, files in tqdm(cdparams_files.items(), desc='Iterating cdparams'):
-        
+    # Preload all PLV files into memory to reduce disk I/O
+    plv_files = {}
+    for root, _, files in os.walk(os.path.join(path, 'merged')):
+        for file in files:
+            if file.startswith('DIS_PLV_') and file.endswith('.txt'):
+                dept = file.split('_')[-1].split('.')[0]
+                file_path = os.path.join(root, file)
+                if dept not in plv_files:
+                    try:
+                        # Use low_memory=False and dtype optimization
+                        plv_files[dept] = pd.read_csv(
+                            file_path, sep='\t', encoding='latin-1', on_bad_lines='skip', low_memory=False, dtype=str
+                        )
+                    except Exception as e:
+                        print(f"Error reading PLV file {file_path}: {e}")
+
+    whole_json = {'cdparams': []}
+
+    def process_cdparam(cdparam, files):
         count = {}
         zero_values = 0
         for file in files:
             dept = file.split('_')[-2]
-            plv = os.path.join(path, 'merged', dept, 'DIS_PLV_' + dept + '.txt')
-            df_plv = pd.read_csv(plv, sep='\t', encoding='latin-1', on_bad_lines='skip')
-            df_result = pd.read_csv(file, sep='\t', encoding='latin-1', on_bad_lines='skip')
-            df_merged = pd.merge(df_result, df_plv, on='referenceprel', how='left')
-            # Now df_merged contains all columns from df_result and df_plv,
-            # with the columns from df_plv added based on matching 'referenceprel'.
-            # If there's no matching 'referenceprel' in df_plv, the  columns will have NaN values.
-            counts = df_merged.groupby('inseecommuneprinc').size().reset_index(name='count')
-            zero_values += df_result['valtraduite'].isin([0, 0.0, '0', '0.0']).sum()
-            for index, row in counts.iterrows():
-                insee = row['inseecommuneprinc']
-                c = row['count']
-                if insee not in count:
-                    count[insee] = 0
-                count[insee] += c
-        average = sum(count.values()) / len(count) if count else 0
-        percentage_zero = (zero_values / sum(count.values())) * 100 if sum(count.values()) > 0 else 0
+            df_plv = plv_files.get(dept)
+            if df_plv is None:
+                continue
+            try:
+                # Use dtype=str to avoid dtype inference overhead
+                df_result = pd.read_csv(file, sep='\t', encoding='latin-1', on_bad_lines='skip', low_memory=False, dtype=str)
+            except Exception as e:
+                print(f"Error reading result file {file}: {e}")
+                continue
+
+            # Use merge only on needed columns to reduce memory
+            if 'referenceprel' in df_result.columns and 'referenceprel' in df_plv.columns:
+                df_merged = pd.merge(
+                    df_result[['referenceprel', 'inseecommuneprinc', 'valtraduite']] if 'inseecommuneprinc' in df_result.columns and 'valtraduite' in df_result.columns else df_result,
+                    df_plv[['referenceprel', 'inseecommuneprinc']] if 'inseecommuneprinc' in df_plv.columns else df_plv,
+                    on='referenceprel', how='left', suffixes=('', '_plv')
+                )
+            else:
+                continue
+
+            # Use value_counts for faster counting
+            if 'inseecommuneprinc' in df_merged.columns:
+                counts = df_merged['inseecommuneprinc'].value_counts()
+                for insee, c in counts.items():
+                    if pd.isna(insee):
+                        continue
+                    count[insee] = count.get(insee, 0) + int(c)
+            # Optimize zero value counting
+            if 'valtraduite' in df_result.columns:
+                zero_values += df_result['valtraduite'].isin(['0', '0.0', 0, 0.0]).sum()
+
+            del df_result, df_merged
+            gc.collect()
+
+        total_obs = sum(count.values())
+        average = total_obs / len(count) if count else 0
+        percentage_zero = (zero_values / total_obs) * 100 if total_obs > 0 else 0
         cdparam_json = {
             'cdparam': str(cdparam),
             'observations': {
                 'average_per_commune': str(average),
-                'total_observations': str(sum(count.values())),
+                'total_observations': str(total_obs),
                 'total_communes': str(len(count)),
-                'percentage_zero_values': str(percentage_zero) if 'percentage_zero' in locals() else '0',
-                'counts':[{'commune': str(k), 'value': str(v)} for k, v in count.items()]
+                'percentage_zero_values': str(percentage_zero),
+                'counts': [{'commune': str(k), 'value': str(v)} for k, v in count.items()]
             }
         }
         stats_file_path = os.path.join(path, 'stats', f'stats_{cdparam}.json')
         os.makedirs(os.path.dirname(stats_file_path), exist_ok=True)
         with open(stats_file_path, 'w') as f:
             json.dump(cdparam_json, f, indent=4)
-        
         cdparam_files_json = {
             'cdparam': str(cdparam),
             'files': files
         }
-        whole_json['cdparams'].append(cdparam_files_json)
+        return cdparam_files_json
+
+    # Use ThreadPoolExecutor for parallel processing
+    results = []
+    with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as executor:
+        futures = [executor.submit(process_cdparam, cdparam, files) for cdparam, files in cdparams_files.items()]
+        for f in tqdm(as_completed(futures), total=len(futures), desc='Processing cdparams'):
+            result = f.result()
+            results.append(result)
+
+    whole_json['cdparams'].extend(results)
     with open(os.path.join(path, 'stats', f'files_paths.json'), 'w') as f:
         json.dump(whole_json, f, indent=4)
 
@@ -143,9 +188,10 @@ def merge_all(path):
         merged_df.to_csv(output_file, sep='\t', index=False, encoding='latin-1')
 
 import csv
+from concurrent.futures import ThreadPoolExecutor, as_completed
 def shorten_param_csv():
     input_filename='data/PAR_20250523_SANDRE.csv'
-    output_filename='data/clean/PAR_SANDRE_short.txt'
+    output_filename='data/PAR_SANDRE_short.txt'
     delimiter=';'
     indices_to_keep=[0, 1, 6, 7, 10, 184]
     cdparams = get_selected_cdparams('C:/Users/mberthie/Documents/StageHubEau/')
@@ -159,7 +205,7 @@ def shorten_param_csv():
     df.to_csv(output_filename, sep='\t', index=False, encoding='latin-1')
 
 if __name__ == '__main__':
-    path = 'C:/Users/mberthie/Documents/StageHubEau/data'
+    path = os.path.join(os.getcwd(), 'data')
     #merge_com(path)
     #merge_results(path)
     #merge_plv(path)
