@@ -1,4 +1,4 @@
-Code    Min     Max     Unite       Nom                                                             
+Code    Min     Max     Unite       Nom         Comments                                                   
 
 ----------------------------------------------Limites de qualité microbiologiques----------------------------------------------
 1449    0       0       n/250ml     Escherichia coli (E. coli)
@@ -10,25 +10,42 @@ Code    Min     Max     Unite       Nom
 1041    0       20      n/ml        Numération de germes aérobies revivifiables mesurés à 37 oC        (30  8248, 20  1040, 36  5441)
 Microorganismes pathogènes (*) : Cryptosporidium, Giardia, Legionella species et Legionella pneumophila
 
---------Limites de qualité physico-chimiques de l'eau minérale naturelle conditionnée ou distribuée en buvette publique--------
-1376    0       5,0     µg/l        Antimoine.          (antimoine 125?  6063)
-1369    0       10      µg/l        Arsenic total.
-1396    0       1,0     mg/l        Baryum
-1362    0       inf     mg/l        Bore                (Bore11?  1818)
-1388    0       3,0     µg/l        Cadmium
-1389    0       50      µg/l        Chrome              (Chrome51? 7976)
-1392    0       1,0     mg/l        Cuivre
-        0       70      µg/l        Cyanures            (Cyanure Libre:  1084    Cyanure Totaux:  1390)
-        0       5,0     mg/l        Fluorures                   (de sulfuryle 	5637        anion 	7073)
-1382    0       10      µg/l        Plomb               (212 210 211 214 oxydes)
-1394    0       500     µg/l        Manganèse           (54 echangeable)
-1387    0       1,0     µg/l        Mercure
-1386    0       20      µg/l        Nickel              (assimilable)
-1340    0       50      mg/l        Nitrates
-1339    0       0,1     mg/l        Nitrites
-1385    0       10      µg/l        Sélénium
-
-
-Couleur.    mg/l (Pt)
-
-Odeur et saveur
+----------------------------------------------Summary Table: French vs European Criteria----------------------------------------------
+| Code   | Substance                                    | French Limit         | European Limit        | Notes                                               |
+|--------|----------------------------------------------|----------------------|-----------------------|-----------------------------------------------------|
+| 1376   | Antimoine                                    | 5,0 µg/l             | 10 µg/l               |                                                     |
+| 1369   | Arsenic total                                | 10 µg/l              | 10 µg/l               |                                                     |
+| 1396   | Baryum                                       | 1,0 mg/l             | -                     |                                                     |
+| 1362   | Bore                                         | inf mg/l             | 1,5 mg/l              | French: "inf" (no limit specified)                  |
+| 1388   | Cadmium                                      | 3,0 µg/l             | 5,0 µg/l              |                                                     |
+| 1389   | Chrome                                       | 50 µg/l              | 25 µg/l               |                                                     |
+| 1392   | Cuivre                                       | 1,0 mg/l             | 2,0 mg/l              |                                                     |
+| -      | Cyanures                                     | 70 µg/l              | 50 µg/l               |                                                     |
+| -      | Fluorures                                    | 5,0 mg/l             | 1,5 mg/l              |                                                     |
+| 1382   | Plomb                                        | 10 µg/l              | 5 µg/l                |                                                     |
+| 1394   | Manganèse                                    | 500 µg/l             | -                     |                                                     |
+| 1387   | Mercure                                      | 1,0 µg/l             | 1,0 µg/l              |                                                     |
+| 1386   | Nickel                                       | 20 µg/l              | 20 µg/l               |                                                     |
+| 1340   | Nitrates                                     | 50 mg/l              | 50 mg/l               |                                                     |
+| 1339   | Nitrites                                     | 0,1 mg/l             | 0,50 mg/l             |                                                     |
+| 1385   | Sélénium                                     | 10 µg/l              | 20 µg/l               |                                                     |
+| X      | Acrylamide                                   | -                    | 0,10 µg/l             | Only European                                       |
+| X      | Benzène                                      | -                    | 1,0 µg/l              | Only European                                       |
+| X      | Benzo(a)pyrène                               | -                    | 0,010 µg/l            | Only European                                       |
+| X      | Bisphénol A                                  | -                    | 2,5 µg/l              | Only European                                       |
+| X      | Bromates                                     | -                    | 10 µg/l               | Only European                                       |
+| X      | Chlorates                                    | -                    | 0,25 mg/l             | Only European                                       |
+| X      | Chlorites                                    | -                    | 0,25 mg/l             | Only European                                       |
+| X      | 1,2-dichloroéthane                           | -                    | 3,0 µg/l              | Only European                                       |
+| X      | Épichlorhydrine                              | -                    | 0,10 µg/l             | Only European                                       |
+| X      | Acides haloacétiques (AHA)                   | -                    | 60 µg/l               | Only European                                       |
+| X      | Microcystine-LR                              | -                    | 1,0 µg/l              | Only European                                       |
+| X      | Pesticides                                   | -                    | 0,10 µg/l             | Only European                                       |
+| X      | Total pesticides                             | -                    | 0,50 µg/l             | Only European                                       |
+| X      | Total PFAS                                   | -                    | 0,50 µg/l             | Only European                                       |
+| X      | Somme PFAS                                   | -                    | 0,10 µg/l             | Only European                                       |
+| X      | Hydrocarbures aromatiques polycycliques      | -                    | 0,10 µg/l             | Only European                                       |
+| X      | Tétrachloroéthylène et trichloroéthylène     | -                    | 10 µg/l               | Only European                                       |
+| X      | Total trihalométhanes                        | -                    | 100 µg/l              | Only European                                       |
+| X      | Uranium                                      | -                    | 30 µg/l               | Only European                                       |
+| X      | Chlorure de vinyle                           | -                    | 0,50 µg/l             | Only European                                       |
