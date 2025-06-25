@@ -3,6 +3,9 @@
 \usepackage[T1]{fontenc}
 \usepackage[english]{babel}
 \usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{float}
+\graphicspath{{img/}}
 
 \title{My Report}
 \author{Your Name}
@@ -20,104 +23,79 @@
 Provide an overview of the internship, its context, and main objectives.
 
 \section{Data Preparation}
-The first step of the internship involved finding open source data on water quality in France. 
-The internship supervisor provided several sources, notably the \textit{HubEau} (https://hubeau.eaufrance.fr/) 
-and TODO website that offer water quality data by French communes.
+The first step is to find the public data available on the subject, to understand and explore it, and to prepare it for analysis.
 
-It is important to note that the data can be provided in multiple ways:
-\begin{itemize}
-    \item \textbf{Databases}: These allow users to download the entire raw dataset for offline analysis.
-    \item \textbf{APIs}: These provide access to portions of the data through URL-based queries, 
-        enabling more targeted and up-to-date data. Especially used for online services using such data.
-\end{itemize}
-
-The HubEau platform is an API that serves as an interface to the underlying databases available on \texttt{data.gouv.fr}.
-In this internship, we mostly focused on the databases, to explore and create tools of analysis first, 
-and maybe later create services with the APIs.
 \subsection{Databases}
-Let's list the different databases available on the subject:
+In France, the water quality legally obligated to be monitored, with measurements being taken regularly all over the country.
+Theses measurements takes place at different stages of the water treatment process, and are stored in several databases.
 
+\includegraphics[width=0.8\textwidth]{Process_eau.png}
+
+The following databases contains theses measurements, and are all maintained aswell as publicly accessible online.
 \begin{itemize}
-    \item \textbf{Sandre Reference Databases} (\url{https://www.sandre.eaufrance.fr/}) 
-        -- All datasets related to water quality in France are structured using standardized referentials defined by SANDRE. 
-        These referentials provide a unified framework for parameters, codes, and nomenclatures, ensuring consistency 
-        and interoperability across different data sources. The Sandre reference databases are therefore fundamental 
-        for any analysis or integration of water quality data.
-    \item \textbf{Sanitary Control of Distributed Water} (\url{https://www.data.gouv.fr/fr/datasets/resultats-du-controle-sanitaire-de-leau-distribuee-commune-par-commune/}, 
-        \url{https://hubeau.eaufrance.fr/page/api-qualite-eau-potable}) 
-        -- Contains results of sanitary controls of distributed water, with data available by municipality and updated 
-        every few days to months. Parameters include microbiological, physical, and chemical indicators.
-    \item \textbf{Sanitary Control of Tap Water} (\url{https://www.data.gouv.fr/fr/datasets/resultats-du-controle-sanitaire-de-leau-du-robinet/}) 
-        -- Provides additional results on tap water quality.
-    \item \textbf{Groundwater Quality} (\url{https://ades.eaufrance.fr/Recherche/Index/QualitometreAvance?g=9220e3}) 
-        -- Provides groundwater quality measurements, though no API is available.
-    \item \textbf{Quality of Groundwater and Surface Water} (\url{https://hubeau.eaufrance.fr/page/api-qualite-nappes}, 
-        \url{https://hubeau.eaufrance.fr/page/api-qualite-cours-deau}) 
-        -- APIs for accessing groundwater and surface water quality data from the ADES database.
-    \item \textbf{Legislation on Drinking Water} (\url{https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000274485/2022-11-28/}) 
-        -- Provides criteria for drinking water.
+    \item \textbf{Source Water Quality} -- (\href{https://www.data.gouv.fr/fr/datasets/resultats-du-controle-sanitaire-de-leau-distribuee-commune-par-commune/}{Measurements taken at the source, whether groundwater or surface water})\footnote{\url{https://www.data.gouv.fr/fr/datasets/resultats-du-controle-sanitaire-de-leau-distribuee-commune-par-commune/}}
+    \item \textbf{Sanitary Control of Distributed Water} -- (\href{https://www.data.gouv.fr/fr/datasets/resultats-du-controle-sanitaire-de-leau-du-robinet/}{Measurements taken at the water treatment centers, before distribution})\footnote{\url{https://www.data.gouv.fr/fr/datasets/resultats-du-controle-sanitaire-de-leau-du-robinet/}}
+    \item \textbf{Sanitary Control of Tap Water} -- (\href{https://ades.eaufrance.fr/Recherche/Index/QualitometreAvance?g=9220e3}{Measurements taken at random taps within the distribution network})\footnote{\url{https://ades.eaufrance.fr/Recherche/Index/QualitometreAvance?g=9220e3}}
+\end{itemize}
+All of theses are also available via the (\href{https://hubeau.eaufrance.fr/}{Hubeau API})\footnote{\url{https://hubeau.eaufrance.fr/}}.
+
+\newpage
+\subsection{SANDRE Referentials}
+All data related to water quality in France is organized according to the SANDRE (Service d’Administration Nationale des Données et Référentiels sur l’Eau) framework. SANDRE is a national authority responsible for establishing and maintaining standardized reference systems for all aspects of water data, including water sources, treatment facilities, distribution networks, and the parameters used to assess water quality.
+
+The SANDRE referential ensures that every parameter relevant to water quality is assigned a unique identifier, known as \texttt{cdparametre}. This code allows for the unambiguous identification of each measured element—whether it is a physical, chemical, or biological parameter—across all datasets.
+
+The referential is publicly accessible, and SANDRE provides an access to theses referential, as a database of an API, on it's (\href{https://www.sandre.eaufrance.fr/v2/}{website}\footnote{\url{https://www.sandre.eaufrance.fr/v2/}}. It plays an essential role in managing the afformentioned databases.
+
+\subsection{Legislation}
+We're also looking for the specific legislation that defines the water potability or not.
+The French and European legislation diverges, on the number of parameters included, and on their thresholds aswell.
+
+The specific legislation can be found in the following links:
+\begin{itemize}
+    \item \href{https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000274485/2022-11-28/}{\textbf{French Legislation on Drinking Water}}\footnote{\url{https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000274485/2022-11-28/}}
+    \item \href{https://eur-lex.europa.eu/FR/legal-content/summary/drinking-water-essential-quality-standards.html}{\textbf{European Legislation on Drinking Water}}\footnote{\url{https://eur-lex.europa.eu/FR/legal-content/summary/drinking-water-essential-quality-standards.html}}
 \end{itemize}
 
-Water quality is monitored at several key stages as it moves from natural sources to the consumer's tap. 
-Analyses are first performed at the source—whether groundwater or surface water—to assess initial quality. 
-After collection, water is treated at sanitary stations, where further analyses ensure it meets drinking standards 
-before entering the distribution network. Finally, additional checks are conducted at random taps within 
-the network to verify that quality is maintained up to the point of use.
+Theses legislations define the maximum allowed values for microbiological parameters (the presence of dangerous organisms), aswell as chemical parameters.
+The full list of chemical parameters criterias is available in the annex.
+
+
+
+\subsection{Data Selection}
+
 
 For the purposes of this internship, we chose to focus our efforts on the \textbf{Sanitary Control of Distributed Water} database. 
-This dataset offers comprehensive and regularly updated information on water quality at the municipal level, 
-making it an ideal starting point for analysis and tool development.
-Throughout this project, we will of course make extensive use of the SANDRE database itself. 
-The SANDRE framework organizes water quality information by assigning a unique identifier, called \texttt{cdparametre}, 
-to each measured element—whether it is a physical, chemical, or environmental parameter. In all the referenced databases, 
-each data entry corresponds to the measurement of a single \texttt{cdparametre} at a specific point in time. 
-This consistent structure enables unified analysis across datasets and simplifies the integration of new sources in the future.
+This dataset is what is being used to determine the potability of water in each municipalities, which is the subject of our project.
+We will of course make extensive use of the SANDRE database itself to naviguate and process the data. 
+
+\newpage
 \subsection{Data Cleaning}
-The data cleaning phase was essential due to the heterogeneity and scale of the datasets. 
-All data sources were provided in CSV format, but with differing delimiters and encoding schemes, 
-necessitating careful standardization during import. In particular, the SANDRE reference database contained over one thousand columns, 
-requiring a systematic approach to column selection.
+The data cleaning phase is essential to reduce the size of the dataset, which approximate 15Gb in total.
+All data sources were provided in CSV format, but with differing delimiters and encoding schemes, and in multiple tables, orginized by years.
+We decided to merge all the tables into a single table, dividing it into multiple, one per parameter to keep the memory usage manageable.
+The SANDRE referential was reduced to the selected parameters only, aswell as the key values, being the name, the units and the description of the parameter.
 
-To ensure analytical relevance and computational efficiency, only the columns pertinent to the study—such as parameter codes 
-(\texttt{cdparametre}), measurement values, temporal information, and geographical identifiers—were retained. 
-This selective extraction significantly reduced dataset complexity and facilitated subsequent processing.
-
-Given the overall database size of approximately 15GB, it was not feasible to load the entire dataset into memory. To address this, 
-the data was partitioned by parameter, resulting in separate files for each \texttt{cdparametre}. 
-This strategy enabled parameter-wise processing, optimizing memory usage and allowing for scalable data manipulation.
-
-Data integration from multiple sources was performed using shared keys, such as parameter codes and location identifiers, 
-to ensure consistency and enable cross-referencing. Throughout the cleaning process, rigorous attention was paid to harmonizing data types 
-and formats, as well as identifying and rectifying anomalies or inconsistencies. This comprehensive data preparation established 
-a robust foundation for all subsequent analyses.
 
 \section{Data Exploration}
-Summarize the initial exploration of the dataset, with an emphasis on timeseries analysis.
+
 \subsection{Sandre Parameters}
-SANDRE provides an extensive list of parameters, each identified by a unique code (\texttt{cdparametre}).
-We want to select the relevant parameters for our analysis, focusing on thoses that are most indicative of water quality.
-It starts with the parameters considered for the french and european legislation, aswell as other parameters that we might consider important.
-We also want to select the parameters with a sufficient sample size, both-timewise, and geographically-wise.
+SANDRE provides an extensive list of parameters, some of which are not relevant to our analysis, and some that are not even measured in the dataset.
 
 Parameters fall into two main types: those with continuous values for every measurement (e.g., temperature), 
-and detection parameters, which are usually zero but occasionally indicate the presence of a specific substance or organism.
-Theses 2 types are important to distinguish, as they require different analysis methods. For now we will only focus on the continuous parameters.
+and thoses that measure the potential presence of it, which only occasionally yield a non-zero value (e.g., the presence of a contaminant).
+Theses 2 types are important to distinguish, as they require different analysis methods.
 
-
+An important focus on sample size is also nescessary, both geographically and temporally.
 
 So, we decided on 4 filters to determine the parameters to keep:
-- \textbf{Sample Size}: The average number of measurements of the parameter for each commune.
-- \textbf{Geographical Coverage}: The number of communes where the parameter is measured.
-- \textbf{Numerical Continuity}: The percentage of non-zero measurements of the parameter.
-
-IMAGE THRESHOLD
-In order to select the thresholds, an overview of the distribution of theses 3 parameters was made.
-We selected the following thresholds values:
 \begin{itemize}
-    \item \textbf{Sample Size}: 100 measurements per commune
-    \item \textbf{Geographical Coverage}: 50 communes
-    \item \textbf{Legislative Relevance}: 10% non-zero measurements
+    \item \textbf{Temporal Sample Size}: The average number of measurements of the parameter for each commune.
+    \item \textbf{Geographical Sample Size}: The number of communes where the parameter is measured.
+    \item \textbf{\% non-zero values}: The percentage of non-zero measurements of the parameter. Used to determine the type of numerical data.
 \end{itemize}
+
+We processed the entire dataset to obtain theses factors for each parameter, and 
 
 We obtained the following parametesr, of which, only X are present in the legislation:
 \begin{itemize}
@@ -184,13 +162,15 @@ since we have to process all possible pairs of parameters.
 There was a significant effort toward optimizing the memory usage, as per the annex X.
 
 \subsection{Potability Index}
-The potability is only indicated by the respect of the legislation, which defines the maximum allowed values for each parameter.
+The potability is legally only indicated by the respect of the legislation, which defines the maximum allowed values for each parameter.
 So, by default, it follows a binary classification, whether it is potable or not.
-We aimed at creating a continuous value, that would indicate the potability of the water with more information.
-To do that, for continuous numerical values, we calculated a percentage of respect of the maximum allowed values for each parameter.
-For the detection parameters, we calculated the percentage of measurements that were above the maximum allowed value.
-And finally, we took the maximum of theses percentage across all parameters.
-Note that this is a very simplistic approach, and does not take into account the importance of each parameter, aswell as their scale.
+We aimed at creating a more continuous value, to showcase more information about the water quality, whether it is far from the legal limits or not.
+To achieve this, we separated the parameters into the 2 numerical types mentionned before, the continuous parameters, and the presence parameters.
+
+\begin{itemize}
+    \item For the continuous parameters, we introduce a potability index, expressed as a percentage, to quantify water quality. A value of 0\% indicates that all measured parameters are well within safe limits (specifically, below 80\% of their respective legal thresholds), representing optimal potability. A value of 100\% is assigned when at least one parameter exceeds its legal limit, indicating non-potable water. For values between 0\% and 100\%, the index increases according to an exponential function based on how close the highest parameter is to its legal limit within the 80\%–100\% range. This approach ensures that the index remains low when parameters are just above the 80\% threshold, but rises rapidly as any parameter approaches the legal limit, reflecting increasing risk.
+    \item For the presence parameters, we introduce a multi-color classification, with 5 levels: Blue means no presence at all. Green means presence withing the legal limits. Yellow means at least one breach over the legal limits. 
+\end{itemize}
 
 \section{Geographical Analysis}
 
@@ -233,7 +213,7 @@ Summarize the key findings and contributions of the internship.
 \end{itemize}
 
 \subsection{Summary Table: French vs European Criteria}
-\begin{table}[h!]
+\begin{table}[H]
 \centering
 \begin{tabular}{|l|l|l|l|}
 \hline
