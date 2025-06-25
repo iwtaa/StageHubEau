@@ -50,8 +50,9 @@ def map_communes_per_department(df, col, df_min, df_max, departement, cdparam, s
     gdf['inseecommuneprinc'] = gdf['inseecommuneprinc'].astype(str)
     df['inseecommuneprinc'] = df['inseecommuneprinc'].astype(str)
     merged = gdf.merge(df, on='inseecommuneprinc', how='left')
-
+    
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+    print(df_min, df_max)
     merged.plot(
         column=col,
         cmap='viridis',

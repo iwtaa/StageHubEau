@@ -166,42 +166,84 @@ def analyze(path):
         json.dump(whole_json, f, indent=4)
 
 from tqdm import tqdm
-def merge_all(path):
-    merged_path = os.path.join(path, 'data/merged')
-    cdparams = get_selected_cdparams(path)
-    file_names = glob.glob(os.path.join(merged_path, '***/DIS_PLV_*.txt'))
+def merge_all():
+    with open('extract/cdparams_selected.txt', 'r') as f:
+        int_array = [int(line.strip()) for line in f if line.strip()]
+
+    df = pd.read_csv('data/PAR_SANDRE_short.txt', delimiter='\t')
+
+    path = os.getcwd()
+    file_names = glob.glob(os.path.join(path, 'data', 'merged', '*/DIS_RESULT_*.txt'))
+
+    from tqdm import tqdm
+    file_plv = glob.glob(os.path.join(path, 'data', 'merged', '*/DIS_PLV_*.txt'))
     dfs_plv = []
-    for file in tqdm(file_names, desc='Reading DIS_PLV files'):
+    for file in tqdm(file_plv, desc='Reading DIS_PLV files'):
         df = pd.read_csv(file, sep='\t', encoding='latin-1', on_bad_lines='skip')
         dfs_plv.append(df)
     df_plv = pd.concat(dfs_plv, ignore_index=True)
     df_plv.drop_duplicates(inplace=True)
-    
-    for cdparametre_data in tqdm(load_cdparam_jsons(cdparams, path), desc='Processing CDPARAMS', total=len(cdparams)):
-        df, cdparametre = cdparametre_data
+
+    for cdparam in tqdm(int_array, desc='Processing cdparam'):
+        dfs = []
+        for file_name in file_names:
+            if f'{cdparam}' in file_name:
+                dfs.append(pd.read_csv(file_name, delimiter='\t', low_memory=False))
+            
+        df = pd.concat(dfs, ignore_index=True)
         merged_df = pd.merge(df, df_plv, on='referenceprel', how='left')
+
         merged_df.drop_duplicates(inplace=True)
         selected_columns = ['cddept_x', 'cdparametre', 'valtraduite', 'inseecommuneprinc', 'dateprel', 'heureprel']
         merged_df = merged_df[selected_columns]
         merged_df = merged_df.dropna(axis=0)
-        output_file = os.path.join(path, 'data/clean', f'clean_{cdparametre}.txt')
+        output_file = os.path.join(path, 'data/clean', f'clean_{cdparam}.txt')
+        # Set correct types: int, int, float, int, date, date
+        merged_df['cddept_x'] = merged_df['cddept_x'].astype(str)
+        merged_df['cdparametre'] = merged_df['cdparametre'].astype(int)
+        merged_df['valtraduite'] = merged_df['valtraduite'].astype(float)
+        merged_df['inseecommuneprinc'] = merged_df['inseecommuneprinc'].astype(str)
+
         merged_df.to_csv(output_file, sep='\t', index=False, encoding='latin-1')
 
 import csv
 from concurrent.futures import ThreadPoolExecutor, as_completed
 def shorten_param_csv():
-    input_filename='data/PAR_20250523_SANDRE.csv'
-    output_filename='data/PAR_SANDRE_short.txt'
-    delimiter=';'
-    indices_to_keep=[0, 1, 6, 7, 10, 184]
+    input_filename = 'data/PAR_20250523_SANDRE.csv'
+    output_filename = 'data/PAR_SANDRE_short.txt'
+    delimiter = ';'
+    indices_to_keep = [0, 1, 6, 7, 10]
     cdparams = get_selected_cdparams('C:/Users/mberthie/Documents/StageHubEau/')
 
     # Read the CSV file into a pandas DataFrame
     df = pd.read_csv(input_filename, delimiter=delimiter, encoding='latin-1', dtype=str)
+    units = ['SymUniteMesure1', 'SymUniteMesure2', 'SymUniteMesure3', 'SymUniteMesure4', 'SymUniteMesure5', 'SymUniteMesure6', 'SymUniteMesure7', 'SymUniteMesure8']
+    units_df = df[units]
+
+    # Only allow exact units: µg/L, mg/L, g/L, ng/L (no prefix, suffix, or chemical symbols)
+    allowed_units = {'µg/L', 'mg/L', 'g/L', 'ng/L'}
+
+    def clean_unit(unit):
+        if pd.isna(unit):
+            return None
+        unit = unit.replace('(', '').replace(')', '').strip()
+        # Convert units like mgNa/L, mg Cl/L, etc. to mg/L (strip chemical symbols)
+        for allowed in allowed_units:
+            if unit.startswith(allowed[:-2]) and unit.endswith('/L'):
+                return allowed
+        return None
+
+    units_cleaned = units_df.applymap(clean_unit)
+    df['Unit'] = units_cleaned.apply(lambda row: next((u for u in row if u), None), axis=1)
+
     df = df.rename(columns={'ï»¿CdParametre': 'CdParametre'})
-    df = df.iloc[1:, indices_to_keep]
+    df = df.iloc[1:, :]  # Keep all columns for now
     df = df[df['CdParametre'].isin(cdparams)]
-    print(df.columns.tolist())
+
+    # Select only the columns to keep plus 'Unit'
+    columns_to_keep = [df.columns[i] for i in indices_to_keep] + ['Unit']
+    df = df[columns_to_keep]
+
     df.to_csv(output_filename, sep='\t', index=False, encoding='latin-1')
 
 if __name__ == '__main__':
@@ -212,7 +254,7 @@ if __name__ == '__main__':
 
     #analyze(path)
 
-    #merge_all('C:/Users/mberthie/Documents/StageHubEau/')
+    #merge_all()
 
     shorten_param_csv()
     
