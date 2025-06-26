@@ -47,48 +47,34 @@ class MatrixPairedFileProcessor:
         self.current_memory_usage = 0
 
     def process_all_file_pairs(self):
-        files_list = sorted(list(self.files_info.keys()), key=lambda x: self.files_info[x], reverse=True)
+        files_list = sorted(self.files_info.keys(), key=lambda x: self.files_info[x], reverse=True)
         processed_files = set()
-        remaining_files = [f for f in files_list if f not in processed_files]
         bag_index = 0
-        total_pairs = len(list(itertools.combinations(files_list, 2)))
-        total_files_size = sum(self.files_info.values())
-        possible_bags = total_files_size / self.max_memory_bytes
-        print(f"Total pairs: {total_pairs}")
-        print(f"Total files size: {total_files_size / (1024 * 1024):.2f} MB")
-        print(f"Max memory size: {self.max_memory_bytes / (1024 * 1024):.2f} MB")
-        print(f"Averaging possible bags: {possible_bags:.2f}")
-        
-        while remaining_files:
+
+        while True:
             bag_memory = 0
             files_to_load = []
-            for f in remaining_files:
-                temp_files = [file for file in remaining_files if file not in processed_files and file != f]
-                if not temp_files:
-                    fmax_size = 0
-                else:
-                    fmax_size = self.files_info[max(temp_files, key=lambda x: self.files_info[x])]
-
+            for f in files_list:
+                if f in processed_files:
+                    continue
+                temp_files = [file for file in files_list if file not in processed_files and file != f]
+                fmax_size = self.files_info[max(temp_files, key=lambda x: self.files_info[x])] if temp_files else 0
                 if bag_memory + self.files_info[f] + fmax_size <= self.max_memory_bytes:
                     bag_memory += self.files_info[f]
                     files_to_load.append(f)
                     processed_files.add(f)
             if not files_to_load:
-                return
+                break
             for f in files_to_load:
                 self._load_file(f)
-            
             pairs = list(itertools.combinations(files_to_load, 2))
-            remaining_files = [f for f in remaining_files if f not in files_to_load]
+            remaining_files = [f for f in files_list if f not in processed_files]
             all_items = len(pairs) + len(remaining_files) * len(files_to_load)
-
-            print(len(pairs), len(remaining_files), len(files_to_load), all_items)
             with tqdm(total=all_items, desc=f"Processing bag {bag_index + 1}") as pbar:
                 for file_a, file_b in pairs:
                     index_a = self.file_index_map[file_a]
                     index_b = self.file_index_map[file_b]
                     res = self._do_calculation(self.loaded_data[file_a], self.loaded_data[file_b])
-                    print(res)
                     if res:
                         cor, lag, sign = res
                         self.matrix[0, index_a, index_b] = cor
@@ -98,10 +84,6 @@ class MatrixPairedFileProcessor:
                         self.matrix[1, index_b, index_a] = -lag
                         self.matrix[2, index_b, index_a] = sign
                     pbar.update(1)
-                    break
-                break
-                bag_index += 1
-                
                 for f in remaining_files:
                     if not self._load_file(f):
                         continue
@@ -123,9 +105,5 @@ class MatrixPairedFileProcessor:
                             self.matrix[2, index_b, index_a] = sign
                         pbar.update(1)
                     self._unload_file(f)
-                    
             self._unload_all()
-            
-            
-
-
+            bag_index += 1

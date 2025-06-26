@@ -209,11 +209,12 @@ def merge_all():
 import csv
 from concurrent.futures import ThreadPoolExecutor, as_completed
 def shorten_param_csv():
-    input_filename = 'data/PAR_20250523_SANDRE.csv'
-    output_filename = 'data/PAR_SANDRE_short.txt'
+    path = os.getcwd()
+    input_filename = os.path.join(path, 'data/PAR_20250619_SANDRE.csv')
+    output_filename = os.path.join(path, 'data/PAR_SANDRE_short.txt')
     delimiter = ';'
     indices_to_keep = [0, 1, 6, 7, 10]
-    cdparams = get_selected_cdparams('C:/Users/mberthie/Documents/StageHubEau/')
+    cdparams = get_selected_cdparams(os.getcwd())
 
     # Read the CSV file into a pandas DataFrame
     df = pd.read_csv(input_filename, delimiter=delimiter, encoding='latin-1', dtype=str)
@@ -253,8 +254,8 @@ if __name__ == '__main__':
     #merge_plv(path)
 
     #analyze(path)
-
-    #merge_all()
-
     shorten_param_csv()
+    merge_all()
+
+    
     

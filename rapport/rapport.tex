@@ -162,21 +162,15 @@ since we have to process all possible pairs of parameters.
 There was a significant effort toward optimizing the memory usage, as per the annex X.
 
 \subsection{Potability Index}
-The potability is legally only indicated by the respect of the legislation, which defines the maximum allowed values for each parameter.
-So, by default, it follows a binary classification, whether it is potable or not.
-We aimed at creating a more continuous value, to showcase more information about the water quality, whether it is far from the legal limits or not.
-To achieve this, we separated the parameters into the 2 numerical types mentionned before, the continuous parameters, and the presence parameters.
-
-\begin{itemize}
-    \item For the continuous parameters, we introduce a potability index, expressed as a percentage, to quantify water quality. A value of 0\% indicates that all measured parameters are well within safe limits (specifically, below 80\% of their respective legal thresholds), representing optimal potability. A value of 100\% is assigned when at least one parameter exceeds its legal limit, indicating non-potable water. For values between 0\% and 100\%, the index increases according to an exponential function based on how close the highest parameter is to its legal limit within the 80\%–100\% range. This approach ensures that the index remains low when parameters are just above the 80\% threshold, but rises rapidly as any parameter approaches the legal limit, reflecting increasing risk.
-    \item For the presence parameters, we introduce a multi-color classification, with 5 levels: Blue means no presence at all. Green means presence withing the legal limits. Yellow means at least one breach over the legal limits. 
-\end{itemize}
-
-\section{Geographical Analysis}
-
+We want to check if the water quality is up to the european and french standards.
+To do so, we mapped each communes green if no measurement exceeded the legal limit, 
+and a shade between yellow and red for the percentage of measurements that exceeded the legal limit.
 
 \section{Results}
-At first, we limited our analysis to the continuous parameters.
+For the moment, we only focused on the Charente-Maritime department, and the Sanitary Control of Distributed Water database.
+
+
+\subsection{Potability Index Results}
 
 
 \section{Future Work}
