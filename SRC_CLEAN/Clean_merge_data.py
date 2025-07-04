@@ -253,8 +253,8 @@ if __name__ == '__main__':
     #merge_plv(path)
 
     #analyze(path)
-
-    #merge_all()
-
-    shorten_param_csv()
+    
+    merge_all()
+    #shorten_param_csv()
+    
     
