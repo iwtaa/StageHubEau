@@ -19,38 +19,49 @@ def merge_files(file_names, output_file, separator=','):
         merged_df.drop_duplicates(inplace=True)
         merged_df.to_csv(output_file, sep='\t', index=False, encoding='latin-1')
 
-def merge_com(path):
-    input_files = glob.glob(os.path.join(path, 'raw', 'DIS_COM_UDI_*.txt'))
-    output_file = os.path.join(path, 'merged', 'DIS_COM_UDI.csv')
+def merge_all():
+    print("Creating clean data directory...")
+    os.makedirs(os.path.join(os.getcwd(), 'data', 'clean'), exist_ok=True)
+
+    print("Merging DIS_COM_UDI files...")
+    input_files = glob.glob(os.path.join(os.getcwd(), 'data', 'raw', 'DIS_COM_UDI_*.txt'))
+    output_file = os.path.join(os.getcwd(), 'data', 'DIS_COM_UDI.csv')
     merge_files(input_files, output_file)
+    print(f"DIS_COM_UDI merged into {output_file}")
 
-def merge_results(path):
-    input_files = glob.glob(os.path.join(path, 'raw', 'DIS_RESULT_*.txt'))
-    departments = list(set([file_name[-7:-4] for file_name in input_files]))
-    for dept in tqdm(departments, desc='Merging DIS_RESULT'):
-        dept_dir = os.path.join(path, 'merged', dept)
-        os.makedirs(dept_dir, exist_ok=True)
-        dept_files = [file_name for file_name in input_files if file_name.endswith(dept + '.txt')]
-        dept_data = pd.concat([pd.read_csv(file, encoding='latin-1') for file in dept_files], ignore_index=True)
-        param_values = [x for x in dept_data['cdparametre'].unique() if pd.notna(x)]
-        grouped = dept_data.groupby('cdparametre')
-        for param in param_values:
-            output_file = os.path.join(dept_dir, f'DIS_RESULT_{dept}_{int(param)}.txt')
-            param_data = grouped.get_group(param)
-            file_exists = os.path.exists(output_file)
-            with open(output_file, 'a', encoding='latin-1') as f:
-                if not file_exists:
-                    header = '\t'.join(param_data.columns.tolist()) + '\n'
-                    f.write(header)
-                param_data.to_csv(f, mode='a', header=False, sep='\t', index=False, encoding='latin-1', lineterminator='\n')
+    print("Processing DIS_RESULT files...")
+    input_files = glob.glob(os.path.join(os.getcwd(), 'data', 'raw', 'DIS_RESULT_*.txt'))
+    for file in tqdm(input_files, desc='Merging DIS_RESULT files'):
+        plv = os.path.join(os.getcwd(), 'data', 'raw', 'DIS_PLV_' + '_'.join(file.split('_')[-2:]))
+        dtype_dict = {
+            'cddept_x': str,
+            'cdparametre': str,
+            'inseecommuneprinc': str
+        }
+        df = pd.read_csv(file, sep=',', encoding='latin-1', on_bad_lines='skip', dtype=dtype_dict)
+        df_plv = pd.read_csv(plv, sep=',', encoding='latin-1', on_bad_lines='skip', dtype=dtype_dict)
+        # Remove trailing '.0' if present in string columns
+        for col in ['cddept_x', 'cdparametre', 'inseecommuneprinc']:
+            if col in df.columns:
+                df[col] = df[col].str.replace(r'\.0$', '', regex=True)
+        if 'valtraduite' in df.columns:
+            df['valtraduite'] = pd.to_numeric(df['valtraduite'], errors='coerce')
 
-def merge_plv(path):
-    input_files = glob.glob(os.path.join(path, 'raw', 'DIS_PLV_*.txt'))
-    departments = list(set([file_name[:-4][-3:] for file_name in input_files]))
-    for dept in tqdm(departments, desc='Merging DIS_PLV'):
-        dept_files = [file_name for file_name in input_files if file_name.endswith(dept + '.txt')]
-        output_file = os.path.join(path, 'merged', str(dept), f'DIS_PLV_{dept}.txt')
-        merge_files(dept_files, output_file)
+        merged_df = pd.merge(df, df_plv, on='referenceprel', how='left')
+        merged_df.drop_duplicates(inplace=True)
+        columns = ['cddept_x', 'cdparametre', 'valtraduite', 'inseecommuneprinc', 'dateprel', 'heureprel']
+        merged_df = merged_df[columns]
+
+        grouped = merged_df.groupby('cdparametre')
+        for param, group in grouped:
+            output_file = os.path.join(os.getcwd(), 'data', 'clean', f'DIS_RESULT_{param}.csv')
+            if not os.path.exists(output_file):
+                os.makedirs(os.path.dirname(output_file), exist_ok=True)
+                group.to_csv(output_file, sep='\t', index=False, encoding='latin-1')
+            else:
+                group.to_csv(output_file, mode='a', header=False, sep='\t', index=False, encoding='latin-1')
+    print("All merging done.")
+
 
 def analyze(path):
     import gc
@@ -138,36 +149,6 @@ def analyze(path):
     with open(os.path.join(path, 'stats', 'files_paths.json'), 'w') as f:
         json.dump(stats_summary, f, indent=4)
 
-def merge_all():
-    with open('extract/cdparams_selected.txt', 'r') as f:
-        selected_params = [int(line.strip()) for line in f if line.strip()]
-    param_df = pd.read_csv('data/PAR_SANDRE_short.txt', delimiter='\t')
-    base_path = os.getcwd()
-    result_files = glob.glob(os.path.join(base_path, 'data', 'merged', '*/DIS_RESULT_*.txt'))
-    plv_files = glob.glob(os.path.join(base_path, 'data', 'merged', '*/DIS_PLV_*.txt'))
-    plv_dfs = []
-    for file in tqdm(plv_files, desc='Reading DIS_PLV files'):
-        plv_dfs.append(pd.read_csv(file, sep='\t', encoding='latin-1', on_bad_lines='skip'))
-    merged_plv_df = pd.concat(plv_dfs, ignore_index=True)
-    merged_plv_df.drop_duplicates(inplace=True)
-    for param in tqdm(selected_params, desc='Processing cdparam'):
-        param_dfs = []
-        for file_name in result_files:
-            if f'{param}' in file_name:
-                param_dfs.append(pd.read_csv(file_name, delimiter='\t', low_memory=False))
-        param_df_merged = pd.concat(param_dfs, ignore_index=True)
-        merged_df = pd.merge(param_df_merged, merged_plv_df, on='referenceprel', how='left')
-        merged_df.drop_duplicates(inplace=True)
-        columns = ['cddept_x', 'cdparametre', 'valtraduite', 'inseecommuneprinc', 'dateprel', 'heureprel']
-        merged_df = merged_df[columns]
-        merged_df = merged_df.dropna(axis=0)
-        output_file = os.path.join(base_path, 'data/clean', f'clean_{param}.txt')
-        merged_df['cddept_x'] = merged_df['cddept_x'].astype(str)
-        merged_df['cdparametre'] = merged_df['cdparametre'].astype(int)
-        merged_df['valtraduite'] = merged_df['valtraduite'].astype(float)
-        merged_df['inseecommuneprinc'] = merged_df['inseecommuneprinc'].astype(str)
-        merged_df.to_csv(output_file, sep='\t', index=False, encoding='latin-1')
-
 def shorten_param_csv():
     input_file = 'data/PAR_20250523_SANDRE.csv'
     output_file = 'data/PAR_SANDRE_short.txt'
@@ -195,10 +176,4 @@ def shorten_param_csv():
     df.to_csv(output_file, sep='\t', index=False, encoding='latin-1')
 
 if __name__ == '__main__':
-    data_path = os.path.join(os.getcwd(), 'data')
-    merge_com(data_path)
-    merge_results(data_path)
-    merge_plv(data_path)
-    analyze(data_path)
     merge_all()
-    shorten_param_csv()
