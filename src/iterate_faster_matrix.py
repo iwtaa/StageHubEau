@@ -51,14 +51,7 @@ class MatrixPairedFileProcessor:
         processed_files = set()
         remaining_files = [f for f in files_list if f not in processed_files]
         bag_index = 0
-        total_pairs = len(list(itertools.combinations(files_list, 2)))
-        total_files_size = sum(self.files_info.values())
-        possible_bags = total_files_size / self.max_memory_bytes
-        print(f"Total pairs: {total_pairs}")
-        print(f"Total files size: {total_files_size / (1024 * 1024):.2f} MB")
-        print(f"Max memory size: {self.max_memory_bytes / (1024 * 1024):.2f} MB")
-        print(f"Averaging possible bags: {possible_bags:.2f}")
-        
+
         while remaining_files:
             bag_memory = 0
             files_to_load = []
@@ -82,13 +75,11 @@ class MatrixPairedFileProcessor:
             remaining_files = [f for f in remaining_files if f not in files_to_load]
             all_items = len(pairs) + len(remaining_files) * len(files_to_load)
 
-            print(len(pairs), len(remaining_files), len(files_to_load), all_items)
             with tqdm(total=all_items, desc=f"Processing bag {bag_index + 1}") as pbar:
                 for file_a, file_b in pairs:
                     index_a = self.file_index_map[file_a]
                     index_b = self.file_index_map[file_b]
                     res = self._do_calculation(self.loaded_data[file_a], self.loaded_data[file_b])
-                    print(res)
                     if res:
                         cor, lag, sign = res
                         self.matrix[0, index_a, index_b] = cor
@@ -98,8 +89,6 @@ class MatrixPairedFileProcessor:
                         self.matrix[1, index_b, index_a] = -lag
                         self.matrix[2, index_b, index_a] = sign
                     pbar.update(1)
-                    break
-                break
                 bag_index += 1
                 
                 for f in remaining_files:
@@ -125,7 +114,6 @@ class MatrixPairedFileProcessor:
                     self._unload_file(f)
                     
             self._unload_all()
-            
             
 
 

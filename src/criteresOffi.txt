@@ -2,12 +2,12 @@ CdParametre	Substance	Limit_fr	Unit_fr	Limit_eu	Unit_eu
 1376	Antimoine	5.0	µg/l	10.0	µg/l
 1369	Arsenic total	10.0	µg/l	10.0	µg/l
 1396	Baryum	1.0	mg/l		
-1362	Bore	inf	mg/l	1.5	mg/l
-1388	Cadmium	3.0	µg/l	5.0	µg/l
+1362	Bore	1.0	mg/l	1.5	mg/l
+1388	Cadmium	5.0	µg/l	5.0	µg/l
 1389	Chrome	50.0	µg/l	25.0	µg/l
-1392	Cuivre	1.0	mg/l	2.0	mg/l
-1390	Cyanures	70.0	µg/l	50.0	µg/l
-7073	Fluorures	5.0	mg/l	1.5	mg/l
+1392	Cuivre	2.0	mg/l	2.0	mg/l
+1390	Cyanures	50.0	µg/l	50.0	µg/l
+7073	Fluorures	1.5	mg/l	1.5	mg/l
 1382	Plomb	10.0	µg/l	5.0	µg/l
 1394	Manganèse	500.0	µg/l		
 1387	Mercure	1.0	µg/l	1.0	µg/l
@@ -15,18 +15,18 @@ CdParametre	Substance	Limit_fr	Unit_fr	Limit_eu	Unit_eu
 1340	Nitrates	50.0	mg/l	50.0	mg/l
 1339	Nitrites	0.1	mg/l	0.50	mg/l
 1385	Sélénium	10.0	µg/l	20.0	µg/l
-1457	Acrylamide			0.10	µg/l
-1114	Benzène			1.0	µg/l
-1115	Benzo(a)pyrène			0.010	µg/l
+1457	Acrylamide	0.10	µg/l	0.10	µg/l
+1114	Benzène	1.0	µg/l	1.0	µg/l
+1115	Benzo(a)pyrène	0.010	µg/l	0.010	µg/l
 2766	Bisphénol A			2.5	µg/l
-1751	Bromates			10.0	µg/l
+1751	Bromates	10.0	µg/l	10.0	µg/l
 1752	Chlorates			0.25	mg/l
 1735	Chlorites			0.25	mg/l
-1161	1.2-dichloroéthane			3.0	µg/l
+1161	1.2-dichloroéthane	3.0	µg/l	3.0	µg/l
 2058	Microcystine-LR			1.0	µg/l
-6276	Total pesticides			0.50	µg/l
+6276	Total pesticides	0.50	µg/l	0.50	µg/l
 8847	Somme PFAS			0.10	µg/l
-2963	Tétrachloroéthylène et trichloroéthylène			10.0	µg/l
-2036	Total trihalométhanes			100.0	µg/l
+2963	Tétrachloroéthylène et trichloroéthylène	10.0	µg/l	10.0	µg/l
+2036	Total trihalométhanes	100.0	µg/l	100.0	µg/l
 1361	Uranium			30.0	µg/l
-1753	Chlorure de vinyle			0.50	µg/l
+1753	Chlorure de vinyle	0.5	µg/l	0.50	µg/l

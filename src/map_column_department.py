@@ -74,7 +74,10 @@ def map_communes_per_department(df, col, df_min, df_max, departement, cdparam, s
     else:
         plt.show()
     plt.close(fig)
-    
+
+
+
+# Map communes per department for all years, seasons, and overall mean
 def main():
     path = os.getcwd()
 

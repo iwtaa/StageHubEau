@@ -27,7 +27,3 @@ if  __name__ == "__main__":
         df.reset_index(inplace=True)
         
         df.to_csv(os.path.join(cwd, 'data', 'upgraded', f'upgraded_{cdparam}.txt'), sep='\t', index=False, encoding='latin-1')
-
-
-    
-    
